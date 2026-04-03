@@ -1,0 +1,93 @@
+@import "tailwindcss";
+
+/* ---------------- RESET (FIXES YOUR ISSUE) ---------------- */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  margin: 0;              
+  padding: 0;
+  overflow-x: hidden;    
+}
+
+/* Admin consistency */
+.admin-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 32px;
+}
+
+.admin-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.admin-title {
+  font-size: 28px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.admin-subtitle {
+  color: #64748b;
+  margin-top: 4px;
+}
+
+/* ---------------- DESIGN SYSTEM ---------------- */
+
+@theme {
+  /* Brand Core */
+  --color-brand: #2F2A27;
+  --color-brand-muted: #6B625C;
+  --color-brand-accent: #9C8F87;
+
+  /* Backgrounds */
+  --color-surface: #F5F3F1;
+  --color-surface-2: #ECE8E5;
+
+  /* Buttons */
+  --color-brand-dark: #1F1C1A;
+}
+
+/* ---------------- GLOBAL BASE STYLES ---------------- */
+
+body {
+  font-family: Arial, sans-serif;
+  background-color: var(--color-surface);
+  color: var(--color-brand);
+}
+
+/* Headings use serif */
+h1, h2, h3, h4, h5, h6 {
+  font-family: Arial, sans-serif;
+  letter-spacing: -0.01em;
+}
+/* ---------------- UTILITIES ---------------- */
+
+* {
+  transition: color 0.2s ease, background-color 0.2s ease;
+}
+
+/* ---------------- PASSWORD ICON FIX ---------------- */
+
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none;
+}
+
+input[type="password"]::-webkit-credentials-auto-fill-button {
+  visibility: hidden;
+  display: none !important;
+  pointer-events: none;
+}

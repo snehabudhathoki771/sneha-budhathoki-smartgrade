@@ -1,0 +1,237 @@
+﻿using BCrypt.Net;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using SmartGrade.Data;
+using SmartGrade.DTOs;
+using SmartGrade.Models;
+using SmartGrade.Services;
+using System;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
+
+namespace SmartGrade.Controllers
+{
+    [ApiController]
+    [Route("api/[controller]")]
+    public class AuthController : ControllerBase
+    {
+        private readonly AppDbContext _context;
+        private readonly IConfiguration _configuration;
+        private readonly EmailService _emailService;
+
+        public AuthController(
+            AppDbContext context,
+            IConfiguration configuration,
+            EmailService emailService)
+        {
+            _context = context;
+            _configuration = configuration;
+            _emailService = emailService;
+        }
+
+        // POST: api/Auth/signup
+
+        [HttpPost("signup")]
+        public async Task<IActionResult> Signup(RegisterDto request)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var email = request.Email.ToLower();
+
+            if (await _context.Users.AnyAsync(u => u.Email.ToLower() == email))
+                return BadRequest(new { message = "User with this email already exists." });
+
+            var user = new User
+            {
+                FullName = request.FullName,
+                Email = email,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
+                Role = request.Role
+            };
+
+            _context.Users.Add(user);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "User registered successfully" });
+        }
+
+
+        // POST: api/Auth/login
+
+        [HttpPost("login")]
+        public async Task<IActionResult> Login(LoginDto request)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var email = request.Email.ToLower();
+
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u => u.Email.ToLower() == email);
+
+            if (user == null)
+                return Unauthorized("Invalid email or password.");
+
+            if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
+                return Unauthorized("Invalid email or password.");
+
+            // FIXED CLAIMS
+            var claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                new Claim(ClaimTypes.Name, user.Email),
+                new Claim(ClaimTypes.Email, user.Email),
+                new Claim(ClaimTypes.Role, user.Role)
+            };
+
+            var key = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]!)
+            );
+
+            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+            var token = new JwtSecurityToken(
+                issuer: _configuration["Jwt:Issuer"],
+                audience: _configuration["Jwt:Audience"],
+                claims: claims,
+                expires: DateTime.UtcNow.AddMinutes(
+                    Convert.ToDouble(_configuration["Jwt:ExpiryMinutes"])
+                ),
+                signingCredentials: creds
+            );
+
+            var jwtToken = new JwtSecurityTokenHandler().WriteToken(token);
+
+            // Refresh token
+            user.RefreshToken = Guid.NewGuid().ToString();
+            user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7);
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                token = jwtToken,
+                refreshToken = user.RefreshToken,
+                user = new
+                {
+                    user.Id,
+                    user.FullName,
+                    user.Email,
+                    user.Role
+                }
+            });
+        }
+
+        // POST: api/Auth/refresh-token
+        
+        [HttpPost("refresh-token")]
+        public async Task<IActionResult> RefreshToken(RefreshTokenDto request)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u =>
+                u.RefreshToken == request.RefreshToken &&
+                u.RefreshTokenExpiryTime > DateTime.UtcNow
+            );
+
+            if (user == null)
+                return Unauthorized("Invalid or expired refresh token.");
+
+            var claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                new Claim(ClaimTypes.Name, user.Email),
+                new Claim(ClaimTypes.Email, user.Email),
+                new Claim(ClaimTypes.Role, user.Role)
+            };
+
+            var key = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]!)
+            );
+
+            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+            var token = new JwtSecurityToken(
+                issuer: _configuration["Jwt:Issuer"],
+                audience: _configuration["Jwt:Audience"],
+                claims: claims,
+                expires: DateTime.UtcNow.AddMinutes(
+                    Convert.ToDouble(_configuration["Jwt:ExpiryMinutes"])
+                ),
+                signingCredentials: creds
+            );
+
+            var jwtToken = new JwtSecurityTokenHandler().WriteToken(token);
+
+            return Ok(new { token = jwtToken });
+        }
+
+       
+        // POST: api/Auth/forgot-password
+        
+        [HttpPost("forgot-password")]
+        public async Task<IActionResult> ForgotPassword(ForgotPasswordDto request)
+        {
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u => u.Email.ToLower() == request.Email.ToLower());
+
+            if (user == null)
+                return Ok("If email exists, reset link has been sent.");
+
+            var token = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
+
+            user.ResetToken = token;
+            user.ResetTokenExpiry = DateTime.UtcNow.AddMinutes(30);
+            await _context.SaveChangesAsync();
+
+            var resetLink = $"http://localhost:5173/reset-password?token={token}";
+            _emailService.SendResetEmail(user.Email, resetLink);
+
+            return Ok("If email exists, reset link has been sent.");
+        }
+
+ 
+        // POST: api/Auth/reset-password
+        
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword(ResetPasswordDto request)
+        {
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u =>
+                    u.ResetToken == request.Token &&
+                    u.ResetTokenExpiry > DateTime.UtcNow
+                );
+
+            if (user == null)
+                return BadRequest("Invalid or expired token.");
+
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+            user.ResetToken = null;
+            user.ResetTokenExpiry = null;
+
+            await _context.SaveChangesAsync();
+
+            return Ok("Password reset successful.");
+        }
+
+     
+        // DEBUG
+        
+        [HttpGet("users")]
+        public async Task<IActionResult> GetAllUsers()
+        {
+            var users = await _context.Users
+                .Select(u => new
+                {
+                    u.Id,
+                    u.FullName,
+                    u.Email,
+                    u.Role
+                })
+                .ToListAsync();
+
+            return Ok(users);
+        }
+    }
+}

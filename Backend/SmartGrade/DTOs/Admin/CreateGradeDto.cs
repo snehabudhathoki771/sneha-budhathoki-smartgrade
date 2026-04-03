@@ -1,0 +1,10 @@
+﻿namespace SmartGrade.DTOs.Admin
+{
+    public class CreateGradeDto
+    {
+        public string GradeName { get; set; }
+        public double MinPercentage { get; set; }
+        public double MaxPercentage { get; set; }
+        public double GpaValue { get; set; }
+    }
+}

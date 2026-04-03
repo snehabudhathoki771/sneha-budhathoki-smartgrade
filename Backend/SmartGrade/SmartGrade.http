@@ -1,0 +1,6 @@
+@SmartGrade_HostAddress = http://localhost:5134
+
+GET {{SmartGrade_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
