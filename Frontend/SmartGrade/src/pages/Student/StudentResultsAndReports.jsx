@@ -63,6 +63,16 @@ export default function StudentResultsAndReports() {
 
             const res = await downloadExamReport(examId);
 
+            // check if response is empty or invalid
+            if (!res || !res.data || res.data.byteLength === 0) {
+                toast.update(toastId, {
+                    render: "Report not available for this exam",
+                    type: "warning",
+                    autoClose: 3000
+                });
+                return;
+            }
+
             const blob = new Blob([res.data], { type: "application/pdf" });
             const url = window.URL.createObjectURL(blob);
 
@@ -71,20 +81,31 @@ export default function StudentResultsAndReports() {
             link.download = `${examName}_Report.pdf`;
             document.body.appendChild(link);
 
+            link.click();
+            document.body.removeChild(link);
+
             toast.update(toastId, {
                 render: "Report downloaded successfully",
                 type: "success",
                 autoClose: 3000
             });
 
-            link.click();
-            document.body.removeChild(link);
-        } catch {
-            toast.update(toastId, {
-                render: "Failed to download report",
-                type: "error",
-                autoClose: 3000
-            });
+        } catch (err) {
+            console.error(err);
+
+            if (err.response?.status === 404) {
+                toast.update(toastId, {
+                    render: "Report not available for this exam",
+                    type: "warning",
+                    autoClose: 3000
+                });
+            } else {
+                toast.update(toastId, {
+                    render: "Failed to download report",
+                    type: "error",
+                    autoClose: 3000
+                });
+            }
         }
     };
 
@@ -210,22 +231,20 @@ export default function StudentResultsAndReports() {
             <div className="flex gap-2 bg-slate-100 p-1.5 rounded-xl w-fit shadow-sm">
                 <button
                     onClick={() => setActiveTab("results")}
-                    className={`px-5 py-2 rounded-lg text-sm font-medium transition ${
-                        activeTab === "results"
+                    className={`px-5 py-2 rounded-lg text-sm font-medium transition ${activeTab === "results"
                             ? "bg-white shadow text-emerald-600"
                             : "text-slate-500 hover:text-slate-700"
-                    }`}
+                        }`}
                 >
                     Detailed Results
                 </button>
 
                 <button
                     onClick={() => setActiveTab("reports")}
-                    className={`px-5 py-2 rounded-lg text-sm font-medium transition ${
-                        activeTab === "reports"
+                    className={`px-5 py-2 rounded-lg text-sm font-medium transition ${activeTab === "reports"
                             ? "bg-white shadow text-emerald-600"
                             : "text-slate-500 hover:text-slate-700"
-                    }`}
+                        }`}
                 >
                     Report Cards
                 </button>
@@ -269,11 +288,10 @@ export default function StudentResultsAndReports() {
 
                                 <div className="flex items-center gap-3">
                                     <span
-                                        className={`px-3 py-1 text-xs rounded-full font-medium ${
-                                            examTotal.percentage >= 40
+                                        className={`px-3 py-1 text-xs rounded-full font-medium ${examTotal.percentage >= 40
                                                 ? "bg-emerald-100 text-emerald-600"
                                                 : "bg-red-100 text-red-600"
-                                        }`}
+                                            }`}
                                     >
                                         {examTotal.percentage >= 40 ? "Pass" : "Fail"}
                                     </span>

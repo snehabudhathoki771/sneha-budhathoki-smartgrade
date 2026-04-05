@@ -76,11 +76,15 @@ export default function AdminDashboard() {
 
   /* ================= GROUP BY EXAM ================= */
 
-  const grouped = data.charts.subjectFailureRanking.reduce((acc, item) => {
-    if (!acc[item.exam]) {
-      acc[item.exam] = [];
+  const grouped = (data.charts?.subjectFailureRanking || []).reduce((acc, item) => {
+
+    const examName = item.exam || "Unknown Exam"; // ✅ FIX
+
+    if (!acc[examName]) {
+      acc[examName] = [];
     }
-    acc[item.exam].push(item);
+
+    acc[examName].push(item);
     return acc;
   }, {});
 
@@ -136,12 +140,12 @@ export default function AdminDashboard() {
             </h3>
 
             {grouped[exam]
-              .sort((a, b) => b.failureRate - a.failureRate)
+              .sort((a, b) => (b.failureRate || 0) - (a.failureRate || 0)) // ✅ FIX
               .slice(0, 5)
               .map((s, i) => (
                 <ProgressRow
                   key={i}
-                  label={s.subject}
+                  label={s.subject || "Unknown Subject"} // ✅ FIX
                   value={s.failureRate}
                 />
               ))}
@@ -280,7 +284,6 @@ function ProgressRow({ label, value }) {
           {label}
         </span>
 
-        {/* 🔥 FIX: handle 0% properly */}
         <span className="text-xs text-gray-500">
           {safeValue === 0 ? "No failures" : `${safeValue.toFixed(1)}%`}
         </span>

@@ -102,12 +102,31 @@ namespace SmartGrade.Services
         {
             QuestPDF.Settings.License = LicenseType.Community;
 
-            var reportData = await BuildReportDataAsync(studentId, examId);
-            var logoPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images", "logo.png");
-            if(!File.Exists(logoPath))
-                throw new Exception("Logo file not found at: " + logoPath);
+            StudentReportCardDto reportData;
 
-            var logoBytes = await File.ReadAllBytesAsync(logoPath);
+            try
+            {
+                reportData = await BuildReportDataAsync(studentId, examId);
+            }
+            catch
+            {
+                return Array.Empty<byte>();
+            }
+
+            var logoPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images", "SGlogo.png");
+
+            byte[] logoBytes = null;
+
+            if (File.Exists(logoPath))
+                logoBytes = await File.ReadAllBytesAsync(logoPath);
+
+            var signPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images", "adminSign.png");
+
+            byte[] signBytes = null;
+
+            if (File.Exists(signPath))
+                signBytes = await File.ReadAllBytesAsync(signPath);
+
             string gradeLetter = GetGradeLetter(reportData.OverallPercentage);
 
             var document = Document.Create(container =>
@@ -116,21 +135,23 @@ namespace SmartGrade.Services
                 {
                     page.Margin(40);
 
-                    page.Header().Row(row =>
+                    page.Header().Background("#1F2A37").Padding(15).Row(row =>
                     {
-                        row.ConstantItem(100).Image(logoBytes).FitWidth();
-
+                        if (logoBytes != null)
+                            row.ConstantItem(80).Height(60).Image(logoBytes);
 
                         row.RelativeItem().Column(column =>
                         {
                             column.Item().Text("SMARTGRADE INTERNATIONAL SCHOOL")
-                                .FontSize(20)
+                                .FontSize(18)
+                                .FontColor(Colors.White)
                                 .Bold();
 
                             column.Item().Text("Official Academic Report Card")
-                                .FontSize(12);
+                                .FontSize(11)
+                                .FontColor(Colors.Grey.Lighten2);
 
-                            column.Item().PaddingTop(5).LineHorizontal(1);
+                            column.Item().PaddingTop(5).LineHorizontal(1).LineColor(Colors.Yellow.Medium);
                         });
                     });
 
@@ -138,14 +159,17 @@ namespace SmartGrade.Services
                     {
                         column.Spacing(15);
 
-                        column.Item().Text($"Student Name: {reportData.StudentName}")
-                            .FontSize(12);
+                        column.Item().Background(Colors.Grey.Lighten3).Padding(10).Column(col =>
+                        {
+                            col.Item().Text($"Student Name: {reportData.StudentName}")
+                                .FontSize(12);
 
-                        column.Item().Text($"Examination: {reportData.ExamName}")
-                            .FontSize(12);
+                            col.Item().Text($"Examination: {reportData.ExamName}")
+                                .FontSize(12);
 
-                        column.Item().Text($"Generated Date: {reportData.GeneratedDate:dd MMM yyyy}")
-                            .FontSize(12);
+                            col.Item().Text($"Generated Date: {reportData.GeneratedDate:dd MMM yyyy}")
+                                .FontSize(12);
+                        });
 
                         column.Item().PaddingTop(10).Text("Subject Performance")
                             .FontSize(16)
@@ -163,18 +187,18 @@ namespace SmartGrade.Services
 
                             table.Header(header =>
                             {
-                                header.Cell().Element(HeaderStyle).Text("Subject");
-                                header.Cell().Element(HeaderStyle).Text("Obtained");
-                                header.Cell().Element(HeaderStyle).Text("Total");
-                                header.Cell().Element(HeaderStyle).Text("Percentage");
+                                header.Cell().Background("#1F2A37").Padding(5).Text("Subject").FontColor(Colors.White);
+                                header.Cell().Background("#1F2A37").Padding(5).Text("Obtained").FontColor(Colors.White);
+                                header.Cell().Background("#1F2A37").Padding(5).Text("Total").FontColor(Colors.White);
+                                header.Cell().Background("#1F2A37").Padding(5).Text("Percentage").FontColor(Colors.White);
                             });
 
                             foreach (var subject in reportData.Subjects)
                             {
-                                table.Cell().Element(CellStyle).Text(subject.SubjectName);
-                                table.Cell().Element(CellStyle).Text(subject.TotalObtained.ToString());
-                                table.Cell().Element(CellStyle).Text(subject.TotalMax.ToString());
-                                table.Cell().Element(CellStyle).Text($"{subject.Percentage}%");
+                                table.Cell().Padding(5).Text(subject.SubjectName);
+                                table.Cell().Padding(5).Text(subject.TotalObtained.ToString());
+                                table.Cell().Padding(5).Text(subject.TotalMax.ToString());
+                                table.Cell().Padding(5).Text($"{subject.Percentage}%");
                             }
 
                             static IContainer HeaderStyle(IContainer container)
@@ -197,33 +221,45 @@ namespace SmartGrade.Services
 
                         column.Item().PaddingTop(20).LineHorizontal(1);
 
-                        column.Item().PaddingTop(10).Text("Overall Summary")
-                            .FontSize(16)
-                            .Bold();
+                        column.Item().Row(row =>
+                        {
+                            row.RelativeItem().Background(Colors.Grey.Lighten3).Padding(10).Column(col =>
+                            {
+                                col.Item().Text("Overall Summary")
+                                    .FontSize(14)
+                                    .Bold();
 
-                        column.Item().Text($"Overall Percentage: {reportData.OverallPercentage}%");
-                        column.Item().Text($"GPA: {reportData.GPA}");
-                        column.Item().Text($"Grade: {gradeLetter}");
-                        column.Item().Text($"Status: {reportData.Status}");
+                                col.Item().Text($"Overall Percentage: {reportData.OverallPercentage}%");
+                                col.Item().Text($"GPA: {reportData.GPA}");
+                                col.Item().Text($"Grade: {gradeLetter}");
+                                col.Item().Text($"Status: {reportData.Status}");
+                            });
 
-                        column.Item().PaddingTop(15).Text("Performance Insight")
-                            .FontSize(14)
-                            .Bold();
+                            row.RelativeItem().Background("#E8F5E9").Padding(10).Column(col =>
+                            {
+                                col.Item().Text("Performance Insight")
+                                    .FontSize(14)
+                                    .Bold();
 
-                        column.Item().Text(GetPerformanceInsight(reportData.Status));
+                                col.Item().Text(GetPerformanceInsight(reportData.Status));
+                            });
+                        });
 
                         column.Item().PaddingTop(30).Row(row =>
                         {
                             row.RelativeItem().Column(col =>
                             {
-                                col.Item().Text("_________________________");
+                                col.Item().Text("-------------------");
                                 col.Item().Text("Class Teacher Signature");
                             });
 
                             row.RelativeItem().AlignRight().Column(col =>
                             {
-                                col.Item().Text("_________________________");
-                                col.Item().Text("Principal Signature");
+                                col.Item().AlignCenter().Height(50).Image(signBytes ?? Array.Empty<byte>());
+
+                                col.Item().AlignCenter().Width(150).LineHorizontal(1);
+
+                                col.Item().AlignCenter().Text("Principal Signature");
                             });
                         });
                     });
@@ -238,12 +274,13 @@ namespace SmartGrade.Services
             var pdfBytes = document.GeneratePdf();
 
             if (pdfBytes == null || pdfBytes.Length == 0)
-                throw new Exception("Generated PDF is empty!");
+                return Array.Empty<byte>();
 
             return pdfBytes;
-
-           
         }
+
+
+
         private string GetGradeLetter(double percentage)
         {
             if (percentage >= 90) return "A+";

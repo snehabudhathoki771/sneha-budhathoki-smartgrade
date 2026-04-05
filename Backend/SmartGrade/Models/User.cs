@@ -32,6 +32,11 @@ namespace SmartGrade.Models
         [Column("refresh_token_expiry_time")]
         public DateTime? RefreshTokenExpiryTime { get; set; }
 
+        [Column("is_active")]
+        public bool IsActive { get; set; } = true;
+
+        [Column("deactivated_until")]
+        public DateTime? DeactivatedUntil { get; set; }
 
 
         // ================= STUDENT PROFILE FIELDS =================

@@ -22,6 +22,7 @@ export default function NotificationBell() {
 
         const interval = setInterval(() => {
             fetchUnreadCount();
+            fetchNotifications();
         }, 30000);
 
         return () => clearInterval(interval);
@@ -45,13 +46,15 @@ export default function NotificationBell() {
         try {
             const res = await getNotifications();
 
+            console.log("Notifications API:", res);
+
             const data = Array.isArray(res.data)
                 ? res.data
                 : res.data?.$values || [];
 
             setNotifications(data);
         } catch (err) {
-            console.error(err);
+            console.error("Notification fetch error:", err);
             setNotifications([]);
         }
     };
@@ -59,47 +62,75 @@ export default function NotificationBell() {
     const fetchUnreadCount = async () => {
         try {
             const res = await getUnreadCount();
+
+            console.log("Unread count:", res);
+
             setUnreadCount(res.data);
         } catch (err) {
-            console.error(err);
+            console.error("Unread count error:", err);
         }
     };
 
     const handleNotificationClick = async (notification) => {
-        await markNotificationRead(notification.id);
+        try {
+            await markNotificationRead(notification.id);
 
-        setOpen(false);
+            setOpen(false);
 
-        fetchNotifications();
-        fetchUnreadCount();
+            fetchNotifications();
+            fetchUnreadCount();
 
-        if (notification.route) {
-            if (notification.referenceId) {
-                navigate(`${notification.route}?id=${notification.referenceId}`);
-            } else {
-                navigate(notification.route);
+            if (notification.route) {
+                if (notification.referenceId) {
+                    navigate(`${notification.route}?id=${notification.referenceId}`);
+                } else {
+                    navigate(notification.route);
+                }
             }
+        } catch (err) {
+            console.error("Mark read error:", err);
         }
     };
 
     const handleMarkAll = async () => {
-        await markAllNotificationsRead();
-        fetchNotifications();
-        fetchUnreadCount();
+        try {
+            await markAllNotificationsRead();
+            fetchNotifications();
+            fetchUnreadCount();
+        } catch (err) {
+            console.error("Mark all error:", err);
+        }
     };
 
     const formatDate = (dateString) => {
         if (!dateString) return "";
 
+        const now = new Date();
         const date = new Date(dateString);
 
-        return date.toLocaleString("en-US", {
-            day: "2-digit",
-            month: "short",
-            year: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-        });
+        const diff = Math.floor((now - date) / 1000);
+
+        if (diff < 60) return "Just now";
+        if (diff < 3600) return `${Math.floor(diff / 60)} min ago`;
+        if (diff < 86400) return `${Math.floor(diff / 3600)} hr ago`;
+        if (diff < 604800) return `${Math.floor(diff / 86400)} days ago`;
+
+        return date.toLocaleDateString();
+    };
+
+    const getTypeStyle = (type) => {
+        switch (type) {
+            case "Exam":
+                return "bg-blue-100 text-blue-600";
+            case "Warning":
+                return "bg-red-100 text-red-600";
+            case "Grade":
+                return "bg-green-100 text-green-600";
+            case "Security":
+                return "bg-yellow-100 text-yellow-700";
+            default:
+                return "bg-gray-100 text-gray-600";
+        }
     };
 
     return (
@@ -161,31 +192,34 @@ export default function NotificationBell() {
                                     key={n.id}
                                     onClick={() => handleNotificationClick(n)}
                                     className={`bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:shadow-md transition cursor-pointer ${
-                                        !n.is_read ? "ring-1 ring-emerald-200" : ""
+                                        !n.isRead ? "border-l-4 border-emerald-500" : ""
                                     }`}
                                 >
                                     <div className="flex justify-between items-start gap-3">
 
                                         <div>
-                                            <h4 className="font-semibold text-slate-800 text-sm">
-                                                {n.title}
-                                                <span className="text-xs text-slate-400 ml-1">
-                                                    ({n.type || "General"})
-                                                </span>
-                                            </h4>
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <h4 className="font-semibold text-slate-800 text-sm">
+                                                    {n.title}
+                                                </h4>
 
-                                            <p className="text-sm text-slate-600 mt-1 leading-relaxed">
+                                                <span className={`text-xs px-2 py-0.5 rounded-full ${getTypeStyle(n.type)}`}>
+                                                    {n.type || "General"}
+                                                </span>
+                                            </div>
+
+                                            <p className="text-sm text-slate-600 leading-relaxed">
                                                 {n.message}
                                             </p>
                                         </div>
 
-                                        {!n.is_read && (
+                                        {!n.isRead && (
                                             <span className="w-2 h-2 rounded-full bg-emerald-500 mt-2"></span>
                                         )}
                                     </div>
 
                                     <p className="text-xs text-slate-400 mt-3">
-                                        {formatDate(n.created_at)}
+                                        {formatDate(n.createdAt)}
                                     </p>
                                 </div>
                             ))}

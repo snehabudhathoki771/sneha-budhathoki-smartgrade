@@ -198,9 +198,14 @@ export default function AdminUsers() {
 
             console.log("Sending days:", deactivateDays);
 
+            //ALWAYS send object
+            const payload = {
+                days: deactivateDays
+            };
+
             await axios.put(
                 `${import.meta.env.VITE_API_URL}/admin/users/${deactivateUserId.id}/deactivate`,
-                deactivateDays === null ? null : deactivateDays,
+                payload,
                 {
                     headers: {
                         Authorization: `Bearer ${token}`,

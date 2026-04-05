@@ -65,29 +65,66 @@ namespace SmartGrade.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login(LoginDto request)
         {
+            // validate request
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
             var email = request.Email.ToLower();
 
+            // find user
             var user = await _context.Users
                 .FirstOrDefaultAsync(u => u.Email.ToLower() == email);
 
             if (user == null)
-                return Unauthorized("Invalid email or password.");
+                return Unauthorized(new { message = "Invalid email or password." });
 
+            // verify password
             if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
-                return Unauthorized("Invalid email or password.");
+                return Unauthorized(new { message = "Invalid email or password." });
 
-            // FIXED CLAIMS
-            var claims = new List<Claim>
+            // auto re-activate (TEMP FIX)
+            if (user.DeactivatedUntil.HasValue && user.DeactivatedUntil < DateTime.UtcNow)
             {
-                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                new Claim(ClaimTypes.Name, user.Email),
-                new Claim(ClaimTypes.Email, user.Email),
-                new Claim(ClaimTypes.Role, user.Role)
-            };
+                user.IsActive = true;
+                user.DeactivatedUntil = null;
+                await _context.SaveChangesAsync();
+            }
 
+            // block inactive users (MAIN FIX)
+            if (!user.IsActive)
+            {
+                // TEMPORARY DEACTIVATION
+                if (user.DeactivatedUntil.HasValue)
+                {
+                    var remainingTime = user.DeactivatedUntil.Value - DateTime.UtcNow;
+
+                    if (remainingTime.TotalSeconds > 0)
+                    {
+                        return StatusCode(403, new
+                        {
+                            message = "Your account is temporarily deactivated.",
+                            remainingSeconds = (int)remainingTime.TotalSeconds
+                        });
+                    }
+                }
+
+                // PERMANENT DEACTIVATION
+                return StatusCode(403, new
+                {
+                    message = "Your account has been permanently deactivated. Contact admin."
+                });
+            }
+
+            // create claims
+            var claims = new List<Claim>
+    {
+        new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+        new Claim(ClaimTypes.Name, user.Email),
+        new Claim(ClaimTypes.Email, user.Email),
+        new Claim(ClaimTypes.Role, user.Role)
+    };
+
+            // jwt config
             var key = new SymmetricSecurityKey(
                 Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]!)
             );
@@ -106,11 +143,12 @@ namespace SmartGrade.Controllers
 
             var jwtToken = new JwtSecurityTokenHandler().WriteToken(token);
 
-            // Refresh token
+            // refresh token
             user.RefreshToken = Guid.NewGuid().ToString();
             user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7);
             await _context.SaveChangesAsync();
 
+            // response
             return Ok(new
             {
                 token = jwtToken,
@@ -126,7 +164,7 @@ namespace SmartGrade.Controllers
         }
 
         // POST: api/Auth/refresh-token
-        
+
         [HttpPost("refresh-token")]
         public async Task<IActionResult> RefreshToken(RefreshTokenDto request)
         {

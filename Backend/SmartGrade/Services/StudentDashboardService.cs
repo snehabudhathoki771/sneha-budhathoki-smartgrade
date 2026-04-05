@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using SmartGrade.Data;
 using SmartGrade.DTOs.Student;
+using SmartGrade.DTOs;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
@@ -20,6 +21,7 @@ namespace SmartGrade.Services
             _notificationService = notificationService;
         }
 
+
         // ================= DASHBOARD =================
 
         public async Task<StudentDashboardDto> GetDashboardAsync(string userId)
@@ -35,7 +37,9 @@ namespace SmartGrade.Services
 
             var marks = await _context.StudentMarks
                 .Include(m => m.Subject)
+                .Include(m => m.Exam) // IMPORTANT (needed for Exam.Status)
                 .Where(m => m.StudentId == studentId
+                    && m.Exam != null
                     && m.Exam.Status == "Published")
                 .ToListAsync();
 
@@ -50,7 +54,9 @@ namespace SmartGrade.Services
                     Percentage = 0,
                     Status = "No Data",
                     TotalExams = 0,
-                    WeakSubjects = new List<WeakSubjectDto>()
+                    WeakSubjects = new List<WeakSubjectDto>(),
+                    StrongSubjects = new List<string>(),
+                    PerformanceTrend = new List<PerformanceTrendDto>()
                 };
             }
 
@@ -100,9 +106,31 @@ namespace SmartGrade.Services
                 }
             }
 
+            // ================= PERFORMANCE TREND =================
+
+            var performanceTrend = examGroups
+                .Select(g =>
+                {
+                    decimal examTotal = g.Sum(x => x.MaxMarks);
+                    decimal examObtained = g.Sum(x => x.MarksObtained);
+
+                    decimal examPercentage = examTotal > 0
+                        ? (examObtained / examTotal) * 100
+                        : 0;
+
+                    var examName = g.First().Exam?.Name ?? "Exam";
+
+                    return new PerformanceTrendDto 
+                    {
+                        ExamName = examName,
+                        Percentage = Math.Round((double)examPercentage, 2)
+                    };
+                })
+                .ToList();
+
             // ================= WEAK SUBJECT DETECTION =================
 
-            var weakSubjects = marks
+            var subjectAnalysis = marks
                 .GroupBy(m => m.Subject.Name)
                 .Select(g =>
                 {
@@ -119,12 +147,22 @@ namespace SmartGrade.Services
                         Percentage = subjectPercentage
                     };
                 })
+                .ToList();
+
+            var weakSubjects = subjectAnalysis
                 .Where(s => s.Percentage < 40)
                 .Select(s => new WeakSubjectDto
                 {
                     Name = s.SubjectName,
                     Percentage = Math.Round((double)s.Percentage, 2)
                 })
+                .ToList();
+
+            // ================= STRONG SUBJECT DETECTION =================
+
+            var strongSubjects = subjectAnalysis
+                .Where(s => s.Percentage >= 75)
+                .Select(s => s.SubjectName)
                 .ToList();
 
             // ================= STATUS CLASSIFICATION =================
@@ -149,9 +187,12 @@ namespace SmartGrade.Services
                 Percentage = Math.Round((double)percentage, 2),
                 Status = status,
                 TotalExams = totalExams,
-                WeakSubjects = weakSubjects
+                WeakSubjects = weakSubjects,
+                StrongSubjects = strongSubjects,
+                PerformanceTrend = performanceTrend
             };
         }
+
 
         // ================= RESULTS =================
 
@@ -351,13 +392,13 @@ namespace SmartGrade.Services
         public async Task<byte[]> GenerateReportAsync(string userId, string examName)
         {
             if (!int.TryParse(userId, out int studentId))
-                throw new Exception("Invalid user ID.");
+                return Array.Empty<byte>();
 
             var student = await _context.Users
                 .FirstOrDefaultAsync(u => u.Id == studentId && u.Role == "Student");
 
             if (student == null)
-                throw new Exception("Student not found.");
+                return Array.Empty<byte>();
 
             // Load ONLY published exam marks
             var allMarks = await _context.StudentMarks
@@ -386,9 +427,7 @@ namespace SmartGrade.Services
                     .Distinct()
                     .ToList();
 
-                throw new Exception(
-                    "No published exam data found. Available exams: " +
-                    string.Join(" | ", availableExams));
+                return Array.Empty<byte>();
             }
 
             decimal totalObtained = marks.Sum(m => m.MarksObtained);
@@ -449,23 +488,35 @@ namespace SmartGrade.Services
         public async Task<byte[]> GenerateReportByIdAsync(string userId, int examId)
         {
             if (!int.TryParse(userId, out int studentId))
-                throw new Exception("Invalid user ID.");
+                return Array.Empty<byte>();
 
             var student = await _context.Users
                 .FirstOrDefaultAsync(u => u.Id == studentId && u.Role == "Student");
 
             if (student == null)
-                throw new Exception("Student not found.");
+                return Array.Empty<byte>();
 
             var marks = await _context.StudentMarks
                 .Include(m => m.Subject)
                 .Include(m => m.Section)
                 .Include(m => m.Exam)
-                .Where(m => m.StudentId == studentId && m.ExamId == examId)
+                .Where(m =>
+                    m.StudentId == studentId &&
+                    m.ExamId == examId &&
+                    m.Exam != null &&
+                    m.Exam.Status == "Published")
                 .ToListAsync();
 
             if (!marks.Any())
-                throw new Exception("No data found for this exam.");
+            {
+                var availableExamIds = await _context.StudentMarks
+                    .Where(m => m.StudentId == studentId)
+                    .Select(m => m.ExamId)
+                    .Distinct()
+                    .ToListAsync();
+
+                return Array.Empty<byte>();
+            }
 
             decimal totalObtained = marks.Sum(m => m.MarksObtained);
             decimal totalMax = marks.Sum(m => m.MaxMarks);

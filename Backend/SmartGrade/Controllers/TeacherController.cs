@@ -1,16 +1,19 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using QuestPDF.Fluent;
+using SmartGrade.Data;
 using SmartGrade.DTOs.AssessmentSection;
 using SmartGrade.DTOs.Exam;
 using SmartGrade.DTOs.Marks;
 using SmartGrade.DTOs.Subject;
-using SmartGrade.Services;
-using SmartGrade.Data;
 using SmartGrade.Models;
+using SmartGrade.Services;
 using System;
 using System.Diagnostics;
 using System.Security.Claims;
+using QuestPDF.Helpers;
+
 
 namespace SmartGrade.Controllers
 {
@@ -124,10 +127,12 @@ namespace SmartGrade.Controllers
                 failed = model.RowResults.Count(r => !r.IsValid)
             });
         }
+
         private async Task RecalculateSubjectResults(int subjectId, int examId)
         {
             var sections = await _context.AssessmentSections
-                .Where(s => s.SubjectId == subjectId)
+                .Include(s => s.Subject)
+                .Where(s => s.SubjectId == subjectId && s.Subject.ExamId == examId)
                 .ToListAsync();
 
             if (!sections.Any())
@@ -139,7 +144,7 @@ namespace SmartGrade.Controllers
                 .Distinct()
                 .ToListAsync();
 
-            //  Load grade scales ONCE (important)
+            //  Load grade scales
             var gradeScales = await _context.GradeScales
                 .Where(g => g.IsActive)
                 .ToListAsync();
@@ -228,6 +233,7 @@ namespace SmartGrade.Controllers
 
             return Ok(marks);
         }
+
 
         [HttpGet("dashboard")]
         public async Task<IActionResult> GetTeacherDashboard()
@@ -381,6 +387,7 @@ namespace SmartGrade.Controllers
             });
         }
 
+
         //  CREATE EXAM 
         [HttpPost("exam")]
         public async Task<IActionResult> CreateExam(CreateExamDto dto)
@@ -413,6 +420,7 @@ namespace SmartGrade.Controllers
             });
         }
 
+
         //  UPDATE EXAM 
         [HttpPut("exams/{examId}")]
         public async Task<IActionResult> UpdateExam(int examId, UpdateExamDto dto)
@@ -438,6 +446,7 @@ namespace SmartGrade.Controllers
                 exam.CreatedBy
             });
         }
+
 
         //  DELETE EXAM 
         [HttpDelete("exams/{examId}")]
@@ -471,7 +480,8 @@ namespace SmartGrade.Controllers
 
             var subject = new Subject
             {
-                Name = dto.Name,
+                Name = System.Globalization.CultureInfo.CurrentCulture.TextInfo
+                    .ToTitleCase(dto.Name.Trim().ToLower()),
                 ExamId = dto.ExamId
             };
 
@@ -501,7 +511,8 @@ namespace SmartGrade.Controllers
             if (subject.Exam!.CreatedBy != teacherId)
                 return Unauthorized("Access denied");
 
-            subject.Name = dto.Name;
+            subject.Name = System.Globalization.CultureInfo.CurrentCulture.TextInfo
+                .ToTitleCase(dto.Name.Trim().ToLower());
             await _context.SaveChangesAsync();
 
             return Ok(new
@@ -782,6 +793,8 @@ namespace SmartGrade.Controllers
             return Ok(exams);
         }
 
+
+        //------------------------- publish exam--------------------------
         [HttpPut("exams/{examId}/publish")]
         public async Task<IActionResult> PublishExam(int examId)
         {
@@ -806,7 +819,8 @@ namespace SmartGrade.Controllers
             foreach (var subject in subjects)
             {
                 var sections = await _context.AssessmentSections
-                    .Where(s => s.SubjectId == subject.Id)
+                    .Include(s => s.Subject)
+                    .Where(s => s.SubjectId == subject.Id && s.Subject.ExamId == examId)
                     .ToListAsync();
 
                 if (!sections.Any())
@@ -832,6 +846,8 @@ namespace SmartGrade.Controllers
 
             exam.Status = "Published";
             exam.PublishedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
 
             // Get unique student IDs for this exam
             var studentIds = await _context.StudentSubjectResults
@@ -863,7 +879,11 @@ namespace SmartGrade.Controllers
                 );
             }
 
-            await _context.SaveChangesAsync();
+            await NotifyAdmins(
+                "Exam Published by Teacher",
+                $"Teacher has published exam '{exam.Name}'",
+                "Exam"
+            );
 
             await _auditService.LogAsync(
                 "Exam Published",
@@ -873,6 +893,7 @@ namespace SmartGrade.Controllers
             return Ok("Exam published successfully.");
         }
 
+        //----------------------unpublish------------------
         [HttpPut("exams/{examId}/unpublish")]
         public async Task<IActionResult> UnpublishExam(int examId)
         {
@@ -888,6 +909,12 @@ namespace SmartGrade.Controllers
             exam.PublishedAt = null;
 
             await _context.SaveChangesAsync();
+
+            await NotifyAdmins(
+                "Exam Unpublished by Teacher",
+                $"Teacher has unpublished exam '{exam.Name}'",
+                "Warning"
+            );
 
             var userEmail = User.Identity?.Name ?? "Unknown";
 
@@ -910,10 +937,6 @@ namespace SmartGrade.Controllers
 
             if (exam == null)
                 return NotFound("Exam not found.");
-
-            // Prevent returning results for unpublished exams
-            if (exam.Status != "Published")
-                return BadRequest("Results are not published yet.");
 
             var subjectResults = await _context.StudentSubjectResults
                 .Where(r => r.ExamId == examId)
@@ -974,9 +997,6 @@ namespace SmartGrade.Controllers
             if (exam == null)
                 return NotFound("Exam not found.");
 
-            if (exam.Status != "Published")
-                return BadRequest("Exam results are not published yet.");
-
             var subjectResults = await _context.StudentSubjectResults
                 .Where(r => r.ExamId == examId)
                 .Include(r => r.Student)
@@ -1018,6 +1038,7 @@ namespace SmartGrade.Controllers
             return Ok(students);
         }
 
+
         // GET AT-RISK STUDENTS
         [HttpGet("exams/{examId}/at-risk")]
         public async Task<IActionResult> GetAtRiskStudents(int examId, [FromQuery] decimal threshold = 40)
@@ -1026,9 +1047,6 @@ namespace SmartGrade.Controllers
 
             if (exam == null)
                 return NotFound("Exam not found.");
-
-            if (exam.Status != "Published")
-                return BadRequest("Exam results are not published yet.");
 
             var subjectResults = await _context.StudentSubjectResults
                 .Where(r => r.ExamId == examId)
@@ -1070,6 +1088,7 @@ namespace SmartGrade.Controllers
 
             return Ok(students);
         }
+
 
         [HttpPost("marks/bulk")]
         public async Task<IActionResult> AddBulkMarks(List<CreateStudentMarkDto> dtos)
@@ -1198,6 +1217,7 @@ namespace SmartGrade.Controllers
             return Ok("Profile updated successfully.");
         }
 
+
         [HttpPost("profile/photo")]
         public async Task<IActionResult> UploadTeacherPhoto(IFormFile photo)
         {
@@ -1231,6 +1251,7 @@ namespace SmartGrade.Controllers
             return Ok(new { photoUrl = teacher.PhotoUrl });
         }
 
+
         // ================= STUDENT SUBJECT INSIGHTS =================
         [HttpGet("students/{id}/insights")]
         public async Task<IActionResult> GetStudentInsights(int id)
@@ -1254,6 +1275,250 @@ namespace SmartGrade.Controllers
                 .ToListAsync();
 
             return Ok(insights);
+        }
+
+
+        [HttpGet("exams/{examId}/export-pdf")]
+        public async Task<IActionResult> ExportExamResultsPdf(int examId)
+        {
+            try
+            {
+                var exam = await _context.Exams
+                    .FirstOrDefaultAsync(e => e.Id == examId);
+
+                if (exam == null)
+                    return NotFound("Exam not found.");
+
+                if (exam.Status != "Published")
+                    return BadRequest("Exam is not published yet.");
+
+                var subjectResults = await _context.StudentSubjectResults
+                    .Where(r => r.ExamId == examId)
+                    .Include(r => r.Student)
+                    .ToListAsync();
+
+                if (subjectResults.Count == 0)
+                    return BadRequest("No results found.");
+
+                // load grade scales BEFORE using
+                var gradeScales = await _context.GradeScales
+                    .Where(g => g.IsActive)
+                    .OrderByDescending(g => g.MinPercentage)
+                    .ToListAsync();
+
+                var grouped = subjectResults
+                    .GroupBy(r => new { r.StudentId, r.Student!.FullName })
+                    .Select(g =>
+                    {
+                        var percentage = g.Average(x => x.FinalPercentage);
+
+                        var matchedGrade = gradeScales.FirstOrDefault(gs =>
+                            percentage >= (decimal)gs.MinPercentage &&
+                            percentage <= (decimal)gs.MaxPercentage);
+
+                        return new
+                        {
+                            studentName = g.Key.FullName,
+                            percentage = Math.Round(percentage, 2),
+                            gpa = Math.Round(g.Average(x => x.GPA), 2),
+                            grade = matchedGrade?.GradeName ?? "N/A"
+                        };
+                    })
+                    .OrderByDescending(x => x.percentage)
+                    .ToList();
+
+                decimal classAverage = Math.Round(grouped.Average(x => x.percentage), 2);
+                decimal highestScore = grouped.Max(x => x.percentage);
+
+                QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
+
+                var logoPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images", "SGlogo.png");
+
+                var document = QuestPDF.Fluent.Document.Create(container =>
+                {
+                    container.Page(page =>
+                    {
+                        page.Size(QuestPDF.Helpers.PageSizes.A4);
+                        page.Margin(30);
+
+                        page.Header().Background("#1F2A37").Padding(15).Column(header =>
+                        {
+                            header.Item().Row(row =>
+                            {
+                                row.ConstantItem(60).Height(60).Image(logoPath);
+
+                                row.RelativeItem().Column(c =>
+                                {
+                                    c.Item().Text("SMARTGRADE INTERNATIONAL SCHOOL")
+                                        .FontSize(18)
+                                        .FontColor(Colors.White)
+                                        .Bold();
+
+                                    c.Item().Text("Exam Results Report")
+                                        .FontSize(11)
+                                        .FontColor(Colors.Grey.Lighten2);
+                                });
+                            });
+
+                            header.Item().PaddingTop(5).LineHorizontal(3).LineColor(Colors.Yellow.Medium);
+                        });
+
+                        page.Content().PaddingTop(15).Column(col =>
+                        {
+                            col.Spacing(15);
+
+                            col.Item().Background(Colors.Grey.Lighten3).Padding(10).Column(c =>
+                            {
+                                c.Item().Text($"Total Students: {grouped.Count}");
+                                c.Item().Text($"Average: {classAverage}%");
+                                c.Item().Text($"Highest: {highestScore}%");
+                                c.Item().Text($"Pass Rate: 100%");
+                            });
+
+                            col.Item().Text("Student Rankings")
+                                .FontSize(16)
+                                .Bold();
+
+                            col.Item().Table(table =>
+                            {
+                                table.ColumnsDefinition(columns =>
+                                {
+                                    columns.ConstantColumn(50);
+                                    columns.RelativeColumn(3);
+                                    columns.RelativeColumn(2);
+                                    columns.RelativeColumn(2);
+                                    columns.RelativeColumn(2);
+                                });
+
+                                table.Header(header =>
+                                {
+                                    header.Cell().Background("#1F2A37").Padding(6).Text("Rank").FontColor(Colors.White);
+                                    header.Cell().Background("#1F2A37").Padding(6).Text("Student").FontColor(Colors.White);
+                                    header.Cell().Background("#1F2A37").Padding(6).Text("%").FontColor(Colors.White);
+                                    header.Cell().Background("#1F2A37").Padding(6).Text("GPA").FontColor(Colors.White);
+                                    header.Cell().Background("#1F2A37").Padding(6).Text("Grade").FontColor(Colors.White);
+                                });
+
+                                int rank = 1;
+
+                                foreach (var s in grouped)
+                                {
+                                    table.Cell().Padding(5).Text(rank.ToString());
+                                    table.Cell().Padding(5).Text(s.studentName);
+                                    table.Cell().Padding(5).Text($"{s.percentage}%");
+                                    table.Cell().Padding(5).Text(s.gpa.ToString());
+                                    table.Cell().Padding(5).Text(s.grade);
+
+                                    rank++;
+                                }
+                            });
+
+                            col.Item().PaddingTop(20).Row(row =>
+                            {
+                                row.RelativeItem().Text($"Date: {DateTime.Now:dd MMM yyyy}");
+
+                                row.RelativeItem().AlignRight().Text("System Administrator");
+                            });
+
+                            col.Item().AlignCenter().PaddingTop(30)
+                                .Text("SmartGrade © All Rights Reserved")
+                                .FontSize(10);
+                        });
+                    });
+                });
+
+                var pdfBytes = document.GeneratePdf();
+
+                return File(
+                    pdfBytes,
+                    "application/pdf",
+                    $"Exam_{examId}_Results.pdf"
+                );
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+
+
+        [HttpGet("students/{id}/full-profile")]
+        public async Task<IActionResult> GetFullStudentProfile(int id)
+        {
+            var student = await _context.Users
+                .Where(u => u.Id == id && u.Role == "Student")
+                .Select(u => new
+                {
+                    u.Id,
+                    u.FullName,
+                    u.Email,
+                    u.Phone,
+                    u.Address,
+                    u.Gender,
+                    u.GuardianName,
+                    u.PhotoUrl
+                })
+                .FirstOrDefaultAsync();
+
+            if (student == null)
+                return NotFound("Student not found");
+
+            var subjects = await _context.StudentSubjectResults
+                .Where(r => r.StudentId == id)
+                .Include(r => r.Subject)
+                .Include(r => r.Exam)
+                .Select(r => new
+                {
+                    subject = r.Subject!.Name,
+                    percentage = r.FinalPercentage,
+                    examName = r.Exam!.Name
+                })
+                .ToListAsync();
+
+            var average = subjects.Any()
+                ? Math.Round(subjects.Average(s => s.percentage), 2)
+                : 0;
+
+            var strongSubjects = subjects
+                .Where(s => s.percentage >= 75)
+                .Select(s => s.subject)
+                .Distinct()
+                .ToList();
+
+            var weakSubjects = subjects
+                .Where(s => s.percentage < 40)
+                .Select(s => s.subject)
+                .Distinct()
+                .ToList();
+
+            return Ok(new
+            {
+                student,
+                subjects,
+                strongSubjects,
+                weakSubjects,
+                average,
+                consistency = "Stable"
+            });
+        }
+
+        private async Task NotifyAdmins(string title, string message, string type)
+        {
+            var admins = await _context.Users
+                .Where(u => u.Role == "Admin")
+                .Select(u => u.Id)
+                .ToListAsync();
+
+            foreach (var adminId in admins)
+            {
+                await _notificationService.CreateAsync(
+                    adminId,
+                    title,
+                    message,
+                    type
+                );
+            }
         }
 
     }

@@ -71,6 +71,8 @@ namespace SmartGrade.Controllers
                     u.FullName,
                     u.Email,
                     u.Role,
+                    u.IsActive,
+                    u.DeactivatedUntil,
                     PhotoUrl = string.IsNullOrEmpty(u.PhotoUrl) ? null : u.PhotoUrl
                 })
                 .ToListAsync();
@@ -107,6 +109,11 @@ namespace SmartGrade.Controllers
             await _context.SaveChangesAsync();
 
             await LogAction("User Created", $"User: {user.Email}");
+            await NotifyAllAdmins(
+                "New User Created",
+                $"A new {user.Role} account was created: {user.Email}",
+                "System"
+            );
 
             return Ok(new
             {
@@ -128,9 +135,11 @@ namespace SmartGrade.Controllers
             var publishedExams = await _context.Exams.CountAsync(e => e.Status == "Published");
 
             var systemAverage = await _context.StudentSubjectResults
+                .Where(r => r.Exam != null && r.Exam.Status == "Published")
                 .AverageAsync(r => (decimal?)r.FinalPercentage) ?? 0;
 
             var atRiskStudents = await _context.StudentSubjectResults
+                .Where(r => r.Exam != null && r.Exam.Status == "Published")
                 .Where(r => r.FinalPercentage < 40)
                 .Select(r => r.StudentId)
                 .Distinct()
@@ -138,19 +147,32 @@ namespace SmartGrade.Controllers
 
             var subjectFailureRanking = await _context.StudentSubjectResults
                 .Include(r => r.Subject)
-                .GroupBy(r => r.Subject!.Name)
+                .Include(r => r.Exam)
+                .Where(r => r.Exam != null) // ensure exam exists
+                .Where(r => r.Exam.Status == "Published") //published exams
+                .GroupBy(r => new
+                {
+                    ExamId = r.ExamId,
+                    ExamName = r.Exam.Name,
+                    SubjectName = r.Subject != null ? r.Subject.Name : "Unknown Subject"
+                })
                 .Select(g => new
                 {
-                    subject = g.Key,
-                    failureRate = g.Count(x => x.FinalPercentage < 40) * 100.0 / g.Count()
-                })
-                .OrderByDescending(x => x.failureRate)
-                .ToListAsync();
+                    exam = g.Key.ExamName,
+                    subject = g.Key.SubjectName,
+                    failureRate = g.Count() == 0
+                        ? 0
+                        : g.Count(x => x.FinalPercentage < 40) * 100.0 / g.Count()
+                    })
+                    .OrderByDescending(x => x.failureRate)
+                    .ToListAsync();
 
             var passCount = await _context.StudentSubjectResults
+                .Where(r => r.Exam != null && r.Exam.Status == "Published")
                 .CountAsync(r => r.FinalPercentage >= 40);
 
             var failCount = await _context.StudentSubjectResults
+                .Where(r => r.Exam != null && r.Exam.Status == "Published")
                 .CountAsync(r => r.FinalPercentage < 40);
 
             return Ok(new
@@ -212,6 +234,11 @@ namespace SmartGrade.Controllers
             await _context.SaveChangesAsync();
             
             await LogAction("User Deleted", $"User ID: {user.Id}, Email: {user.Email}");
+            await NotifyAllAdmins(
+                "User Deleted",
+                $"User deleted: {user.Email}",
+                "Warning"
+            );
 
             return Ok("User deleted successfully.");
         }
@@ -255,6 +282,11 @@ namespace SmartGrade.Controllers
 
             _context.Exams.Remove(exam);
             await _context.SaveChangesAsync();
+            await NotifyAllAdmins(
+                "Exam Deleted",
+                $"Exam '{exam.Name}' was deleted by admin",
+                "Warning"
+            );
 
             await LogAction("Exam Deleted", $"Exam: {exam.Name}");
 
@@ -292,9 +324,16 @@ namespace SmartGrade.Controllers
             );
 
             await LogAction("Exam Force Unpublished", $"Exam: {exam.Name}");
+            await NotifyAllAdmins(
+                "Exam Unpublished",
+                $"Exam '{exam.Name}' has been unpublished",
+                "Exam"
+            );
 
             return Ok("Exam unpublished successfully.");
         }
+
+
         // ================= PASSWORD HASH =================
 
         private string HashPassword(string password)
@@ -388,6 +427,11 @@ namespace SmartGrade.Controllers
             }
 
             await LogAction("Exam Force Published", $"Exam: {exam.Name}");
+            await NotifyAllAdmins(
+                "Exam Published",
+                $"Exam '{exam.Name}' has been published",
+                "Exam"
+            );
 
             return Ok("Exam published successfully.");
         }
@@ -537,6 +581,7 @@ namespace SmartGrade.Controllers
                     Year = g.Key,
                     Count = g.Count()
                 })
+                .OrderBy(x => x.Year)
                 .ToListAsync();
 
             var passCount = await _context.StudentSubjectResults
@@ -567,106 +612,187 @@ namespace SmartGrade.Controllers
                             .Contains(r.ExamId))
                         .Average(r => (decimal?)r.FinalPercentage) ?? 0
                 })
+                .OrderByDescending(x => x.Average)
                 .ToListAsync();
 
+            int totalStudents = passCount + failCount;
+
+            decimal averageScore = avgPerSubject.Any()
+                ? Math.Round(avgPerSubject.Average(x => x.Average), 2)
+                : 0;
+
+            decimal highestScore = avgPerSubject.Any()
+                ? Math.Round(avgPerSubject.Max(x => x.Average), 2)
+                : 0;
+
+            int passRate = totalStudents > 0
+                ? (int)((passCount * 100.0) / totalStudents)
+                : 0;
+
+            var topSubject = avgPerSubject.OrderByDescending(x => x.Average).FirstOrDefault();
+            var weakSubject = avgPerSubject.OrderBy(x => x.Average).FirstOrDefault();
+
+            string insight = passRate >= 80
+                ? "Overall performance is strong with high pass rates."
+                : passRate >= 50
+                    ? "Performance is moderate. Improvement needed in weaker subjects."
+                    : "Performance is low. Immediate academic intervention recommended.";
+
             QuestPDF.Settings.License = LicenseType.Community;
+
+            var logoPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images", "SGlogo.png");
 
             var pdf = Document.Create(container =>
             {
                 container.Page(page =>
                 {
-                    page.Margin(40);
+                    page.Size(PageSizes.A4);
+                    page.Margin(30);
 
-                    page.Header()
-                        .Text("SmartGrade Analytics Report")
-                        .FontSize(20)
-                        .Bold()
-                        .AlignCenter();
-
-                    page.Content().Column(col =>
+                    // ================= HEADER =================
+                    page.Header().Background("#1F2A37").Padding(15).Column(header =>
                     {
-                        col.Spacing(20);
+                        header.Item().Row(row =>
+                        {
+                            row.ConstantItem(60).Height(60).Image(logoPath);
 
-                        col.Item().Text("Exams Per Academic Year").Bold();
+                            row.RelativeItem().Column(c =>
+                            {
+                                c.Item().Text("SMARTGRADE INTERNATIONAL SCHOOL")
+                                    .FontSize(18)
+                                    .FontColor(Colors.White)
+                                    .Bold();
+
+                                c.Item().Text("Analytics Report")
+                                    .FontSize(11)
+                                    .FontColor(Colors.Grey.Lighten2);
+                            });
+                        });
+
+                        header.Item().PaddingTop(5)
+                            .LineHorizontal(3)
+                            .LineColor(Colors.Yellow.Medium);
+                    });
+
+                    // ================= CONTENT =================
+                    page.Content().PaddingTop(15).Column(col =>
+                    {
+                        col.Spacing(15);
+
+                        // ================= KPI =================
+                        col.Item().Background(Colors.Grey.Lighten3).Padding(10).Column(c =>
+                        {
+                            c.Item().Text($"Total Students: {totalStudents}");
+                            c.Item().Text($"Average Score: {averageScore}%");
+                            c.Item().Text($"Highest Score: {highestScore}%");
+                            c.Item().Text($"Pass Rate: {passRate}%");
+                        });
+
+                        // ================= INSIGHTS =================
+                        col.Item().Background(Colors.Blue.Lighten4).Padding(10).Column(c =>
+                        {
+                            c.Item().Text("Performance Insights").Bold();
+                            c.Item().Text($"Top Subject: {topSubject?.Subject} ({topSubject?.Average:0.00}%)");
+                            c.Item().Text($"Weakest Subject: {weakSubject?.Subject} ({weakSubject?.Average:0.00}%)");
+                            c.Item().Text(insight);
+                        });
+
+                        // ================= EXAMS =================
+                        col.Item().Text("Exams Per Academic Year").FontSize(14).Bold();
+
                         col.Item().Table(table =>
                         {
                             table.ColumnsDefinition(columns =>
                             {
-                                columns.RelativeColumn();
-                                columns.RelativeColumn();
+                                columns.RelativeColumn(3);
+                                columns.RelativeColumn(2);
                             });
 
                             table.Header(header =>
                             {
-                                header.Cell().Text("Year").Bold();
-                                header.Cell().Text("Exam Count").Bold();
+                                header.Cell().Background("#1F2A37").Padding(6).Text("Year").FontColor(Colors.White);
+                                header.Cell().Background("#1F2A37").Padding(6).Text("Exam Count").FontColor(Colors.White);
                             });
 
                             foreach (var item in examsPerYear)
                             {
-                                table.Cell().Text(item.Year);
-                                table.Cell().Text(item.Count.ToString());
+                                table.Cell().Padding(5).Text(item.Year);
+                                table.Cell().Padding(5).Text(item.Count.ToString());
                             }
                         });
 
-                        col.Item().Text("Pass / Fail Distribution").Bold();
-                        col.Item().Text($"Passed: {passCount}");
-                        col.Item().Text($"Failed: {failCount}");
+                        // ================= SUBJECT =================
+                        col.Item().Text("Average Score Per Subject").FontSize(14).Bold();
 
-                        col.Item().Text("Average Score Per Subject").Bold();
                         col.Item().Table(table =>
                         {
                             table.ColumnsDefinition(columns =>
                             {
-                                columns.RelativeColumn();
-                                columns.RelativeColumn();
+                                columns.RelativeColumn(3);
+                                columns.RelativeColumn(2);
                             });
 
                             table.Header(header =>
                             {
-                                header.Cell().Text("Subject").Bold();
-                                header.Cell().Text("Average (%)").Bold();
+                                header.Cell().Background("#1F2A37").Padding(6).Text("Subject").FontColor(Colors.White);
+                                header.Cell().Background("#1F2A37").Padding(6).Text("Average (%)").FontColor(Colors.White);
                             });
 
                             foreach (var item in avgPerSubject)
                             {
-                                table.Cell().Text(item.Subject);
-                                table.Cell().Text(item.Average.ToString("0.00"));
+                                table.Cell().Padding(5).Text(item.Subject);
+                                table.Cell().Padding(5).Text(item.Average.ToString("0.00"));
                             }
                         });
 
-                        col.Item().Text("Teacher Performance Overview").Bold();
+                        // ================= TEACHER RANKING =================
+                        col.Item().Text("Teacher Performance Ranking").FontSize(14).Bold();
+
                         col.Item().Table(table =>
                         {
                             table.ColumnsDefinition(columns =>
                             {
-                                columns.RelativeColumn();
-                                columns.RelativeColumn();
+                                columns.ConstantColumn(50);
+                                columns.RelativeColumn(3);
+                                columns.RelativeColumn(2);
                             });
 
                             table.Header(header =>
                             {
-                                header.Cell().Text("Teacher").Bold();
-                                header.Cell().Text("Average (%)").Bold();
+                                header.Cell().Background("#1F2A37").Padding(6).Text("Rank").FontColor(Colors.White);
+                                header.Cell().Background("#1F2A37").Padding(6).Text("Teacher").FontColor(Colors.White);
+                                header.Cell().Background("#1F2A37").Padding(6).Text("Average (%)").FontColor(Colors.White);
                             });
+
+                            int rank = 1;
 
                             foreach (var item in teacherPerf)
                             {
-                                table.Cell().Text(item.Teacher);
-                                table.Cell().Text(item.Average.ToString("0.00"));
+                                table.Cell().Padding(5).Text(rank.ToString());
+                                table.Cell().Padding(5).Text(item.Teacher);
+                                table.Cell().Padding(5).Text(item.Average.ToString("0.00"));
+                                rank++;
                             }
                         });
-                    });
 
-                    page.Footer()
-                        .AlignCenter()
-                        .Text($"Generated on {DateTime.UtcNow:dd MMM yyyy HH:mm}");
+                        // ================= FOOTER =================
+                        col.Item().PaddingTop(20).Row(row =>
+                        {
+                            row.RelativeItem().Text($"Date: {DateTime.Now:dd MMM yyyy}");
+                            row.RelativeItem().AlignRight().Text("System Administrator");
+                        });
+
+                        col.Item().AlignCenter().PaddingTop(30)
+                            .Text("SmartGrade © All Rights Reserved")
+                            .FontSize(10);
+                    });
                 });
             }).GeneratePdf();
 
             return File(pdf, "application/pdf", "SmartGrade_Analytics_Report.pdf");
-    
         }
+
+
         [HttpGet("audit-logs")]
         public async Task<IActionResult> GetAuditLogs()
         {
@@ -727,6 +853,11 @@ namespace SmartGrade.Controllers
             );
 
             await LogAction("Password Reset", $"Admin reset password for {user.Email}");
+            await NotifyAllAdmins(
+                "Password Reset",
+                $"Password reset performed for {user.Email}",
+                "Security"
+            );
 
             return Ok("Password reset successfully and email sent.");
         }
@@ -754,6 +885,69 @@ namespace SmartGrade.Controllers
                 return NotFound("Teacher not found");
 
             return Ok(teacher);
+        }
+
+        // ================= ACTIVATE USER =================
+
+        [HttpPut("users/{id}/activate")]
+        public async Task<IActionResult> ActivateUser(int id)
+        {
+            var user = await _context.Users.FindAsync(id);
+
+            if (user == null)
+                return NotFound("User not found.");
+
+            user.IsActive = true;
+
+            await _context.SaveChangesAsync();
+
+            return Ok("User activated successfully.");
+        }
+
+
+        // ================= DEACTIVATE USER =================
+
+        [HttpPut("users/{id}/deactivate")]
+        public async Task<IActionResult> DeactivateUser(int id, [FromBody] DeactivateUserDto request)
+        {
+            var user = await _context.Users.FindAsync(id);
+
+            if (user == null)
+                return NotFound();
+
+            user.IsActive = false;
+
+            if (request.Days.HasValue)
+            {
+                user.DeactivatedUntil = DateTime.UtcNow.AddDays(request.Days.Value);
+            }
+            else
+            {
+                user.DeactivatedUntil = null; 
+            }
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "User deactivated successfully" });
+        }
+
+
+        private async Task NotifyAllAdmins(string title, string message, string type)
+        {
+            var admins = await _context.Users
+                .Where(u => u.Role == "Admin")
+                .Select(u => u.Id)
+                .ToListAsync();
+
+            foreach (var adminId in admins)
+            {
+                await _notificationService.CreateAsync(
+                    adminId,
+                    title,
+                    message,
+                    type
+                );
+            }
         }
 
     }

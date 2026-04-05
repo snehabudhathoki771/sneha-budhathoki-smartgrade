@@ -103,7 +103,7 @@ export const updateStudentProfile = (formData) =>
 
 export const downloadExamReport = (examId) =>
   api.get(`/student/report/${examId}`, {
-    responseType: "blob",
+    responseType: "arraybuffer",
   });
 
 

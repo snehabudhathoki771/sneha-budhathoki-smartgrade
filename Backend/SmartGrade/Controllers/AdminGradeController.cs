@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using SmartGrade.Data;
 using SmartGrade.DTOs.Admin;
 using SmartGrade.Models;
+using SmartGrade.Services;
 
 namespace SmartGrade.Controllers
 { 
@@ -58,6 +59,7 @@ namespace SmartGrade.Controllers
 
             _context.GradeScales.Add(grade);
             await _context.SaveChangesAsync();
+            await RecalculateAllResults();
 
             return Ok(grade);
 
@@ -116,6 +118,7 @@ namespace SmartGrade.Controllers
             existing.GpaValue = model.GpaValue;
 
             await _context.SaveChangesAsync();
+            await RecalculateAllResults();
 
             return Ok(existing);
         }
@@ -130,8 +133,34 @@ namespace SmartGrade.Controllers
 
             _context.GradeScales.Remove(grade);
             await _context.SaveChangesAsync();
+            await RecalculateAllResults();
 
             return Ok("Grade deleted successfully.");
+        }
+
+        private async Task RecalculateAllResults()
+        {
+            var results = await _context.StudentSubjectResults.ToListAsync();
+
+            var gradeScales = await _context.GradeScales
+                .Where(g => g.IsActive)
+                .OrderByDescending(g => g.MinPercentage)
+                .ToListAsync();
+
+            foreach (var result in results)
+            {
+                var percentage = result.FinalPercentage;
+
+                var matchedGrade = gradeScales.FirstOrDefault(gs =>
+                    percentage >= (decimal)gs.MinPercentage &&
+                    percentage <= (decimal)gs.MaxPercentage);
+
+                result.Grade = matchedGrade?.GradeName ?? "N/A";
+                result.GPA = matchedGrade != null ? (decimal)matchedGrade.GpaValue : 0;
+            }
+
+            await _context.SaveChangesAsync();
+            
         }
 
     }

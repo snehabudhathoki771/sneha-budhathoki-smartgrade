@@ -91,23 +91,27 @@ export default function Login() {
     } catch (err) {
 
       const message = err.response?.data?.message;
+      const remainingSeconds = err.response?.data?.remainingSeconds;
 
+      // Permanent deactivation
       if (message?.toLowerCase().includes("permanently")) {
-        setInactiveMessage("Account permanently deactivated.");
+        setInactiveMessage("Account permanently deactivated. Contact admin.");
       }
 
+      // Temporary deactivation (NEW FIX)
+      else if (remainingSeconds) {
+        setInactiveMessage("Account temporarily deactivated.");
+
+        const target = new Date(Date.now() + remainingSeconds * 1000);
+        setTargetDate(target);
+      }
+
+      // General deactivated fallback
       else if (message?.toLowerCase().includes("deactivated")) {
-
-        const match = message.match(/\d{4}-\d{2}-\d{2}(T[\d:.]+)?/);
-
-        if (match) {
-          setInactiveMessage("Account inactive");
-          setTargetDate(match[0]);
-        } else {
-          setInactiveMessage("Account inactive");
-        }
+        setInactiveMessage("Account inactive");
       }
 
+      // Invalid credentials
       else if (err.response?.status === 401) {
         toast.error("Invalid email or password");
       }
@@ -129,7 +133,6 @@ export default function Login() {
       const remaining = getRemainingTime(targetDate);
 
       if (!remaining) {
-        // ✅ TIMER FINISHED → RESET UI
         resetInactiveState();
         return;
       }
@@ -202,7 +205,7 @@ export default function Login() {
             onClick={() => {
               const order = ["Student", "Teacher", "Admin"];
               setRole(order[(order.indexOf(role) + 1) % order.length]);
-              resetInactiveState(); // 🔥 important
+              resetInactiveState();
             }}
             className="text-sm font-semibold text-emerald-600 hover:text-emerald-700"
           >
@@ -229,7 +232,7 @@ export default function Login() {
               value={email}
               onChange={(e) => {
                 setEmail(e.target.value);
-                resetInactiveState(); // 🔥 FIX
+                resetInactiveState();
               }}
               placeholder="Enter your email"
               required
@@ -249,7 +252,7 @@ export default function Login() {
                 value={password}
                 onChange={(e) => {
                   setPassword(e.target.value);
-                  resetInactiveState(); // 🔥 FIX
+                  resetInactiveState();
                 }}
                 placeholder="Enter your password"
                 required
@@ -278,7 +281,7 @@ export default function Login() {
           {/* Button */}
           <button
             type="submit"
-            disabled={loading || inactiveMessage}
+            disabled={loading}
             className="w-full rounded-xl bg-emerald-500 py-3 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-emerald-600 hover:shadow-md active:scale-[0.98] disabled:opacity-60"
           >
             {loading ? "Signing in..." : "Sign In"}

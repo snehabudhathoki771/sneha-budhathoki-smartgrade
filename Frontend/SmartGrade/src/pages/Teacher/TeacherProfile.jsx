@@ -23,6 +23,18 @@ export default function TeacherProfile() {
     const [updating, setUpdating] = useState(false);
     const [uploading, setUploading] = useState(false);
 
+    // ✅ TOAST STATE
+    const [toasts, setToasts] = useState([]);
+
+    const showToast = (type, text) => {
+        const id = Date.now();
+        setToasts(prev => [...prev, { id, type, text }]);
+
+        setTimeout(() => {
+            setToasts(prev => prev.filter(t => t.id !== id));
+        }, 3000);
+    };
+
     useEffect(() => {
         fetchProfile();
     }, []);
@@ -75,6 +87,8 @@ export default function TeacherProfile() {
 
             setUploading(true);
 
+            showToast("info", "Uploading photo...");
+
             const res = await axios.post(
                 "https://localhost:7247/api/teacher/profile/photo",
                 formData,
@@ -91,9 +105,11 @@ export default function TeacherProfile() {
                 photoUrl: res.data.photoUrl
             }));
 
+            showToast("success", "Photo uploaded successfully");
+
         } catch {
 
-            alert("Photo upload failed");
+            showToast("error", "Photo upload failed");
 
         } finally {
 
@@ -108,6 +124,8 @@ export default function TeacherProfile() {
         try {
 
             setUpdating(true);
+
+            showToast("info", "Updating profile...");
 
             const payload = {
                 fullName: profile.fullName,
@@ -126,11 +144,11 @@ export default function TeacherProfile() {
                 { headers }
             );
 
-            alert("Profile updated successfully.");
+            showToast("success", "Profile updated successfully");
 
         } catch {
 
-            alert("Failed to update profile.");
+            showToast("error", "Failed to update profile");
 
         } finally {
 
@@ -159,6 +177,33 @@ export default function TeacherProfile() {
 
         <div className="px-10 pt-6 pb-10 bg-gradient-to-br from-gray-50 via-white to-gray-100 min-h-screen">
 
+            {/* ✅ TOASTER (TOP RIGHT) */}
+            <div className="fixed top-5 right-5 space-y-3 z-50">
+                {toasts.map(t => (
+                    <div
+                        key={t.id}
+                        className={`flex items-center gap-3 px-5 py-3 rounded-lg shadow-lg text-white text-sm font-medium transition-all
+                            ${t.type === "success" && "bg-green-500"}
+                            ${t.type === "error" && "bg-red-500"}
+                            ${t.type === "info" && "bg-blue-500"}
+                        `}
+                    >
+                        <span>
+                            {t.type === "success" && "✔"}
+                            {t.type === "error" && "✖"}
+                            {t.type === "info" && "ℹ"}
+                        </span>
+                        {t.text}
+                        <button
+                            onClick={() => setToasts(prev => prev.filter(x => x.id !== t.id))}
+                            className="ml-2 text-white/80 hover:text-white"
+                        >
+                            ×
+                        </button>
+                    </div>
+                ))}
+            </div>
+
             {/* TOP PROFILE CARD */}
 
             <div className="bg-white/80 backdrop-blur-md rounded-3xl shadow-lg border border-gray-100 p-8 mb-8 flex justify-between items-center transition hover:shadow-xl">
@@ -182,19 +227,8 @@ export default function TeacherProfile() {
 
                         <div className="absolute bottom-1 right-1 w-9 h-9 bg-green-600 rounded-full flex items-center justify-center shadow-lg border-2 border-white group-hover:scale-110 transition">
 
-                            <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                className="w-4 h-4 text-white"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth="2"
-                                    d="M3 7h4l2-2h6l2 2h4v12H3V7z"
-                                />
+                            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 7h4l2-2h6l2 2h4v12H3V7z" />
                                 <circle cx="12" cy="13" r="3" />
                             </svg>
 
@@ -258,63 +292,33 @@ export default function TeacherProfile() {
                 <div className="grid md:grid-cols-2 gap-6">
 
                     <div>
-                        <label className="text-sm font-medium text-gray-600">
-                            Full Name
-                        </label>
-                        <input
-                            name="fullName"
-                            value={profile.fullName}
-                            onChange={handleChange}
-                            className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition"
-                        />
+                        <label className="text-sm font-medium text-gray-600">Full Name</label>
+                        <input name="fullName" value={profile.fullName} onChange={handleChange}
+                            className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-green-500 outline-none transition" />
                     </div>
 
                     <div>
-                        <label className="text-sm font-medium text-gray-600">
-                            Email
-                        </label>
-                        <input
-                            value={profile.email}
-                            disabled
-                            className="mt-2 w-full bg-gray-100 border border-gray-200 rounded-xl px-4 py-3 text-sm"
-                        />
+                        <label className="text-sm font-medium text-gray-600">Email</label>
+                        <input value={profile.email} disabled
+                            className="mt-2 w-full bg-gray-100 border border-gray-200 rounded-xl px-4 py-3 text-sm" />
                     </div>
 
                     <div>
-                        <label className="text-sm font-medium text-gray-600">
-                            Phone
-                        </label>
-                        <input
-                            name="phone"
-                            value={profile.phone || ""}
-                            onChange={handleChange}
-                            className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-green-500 outline-none transition"
-                        />
+                        <label className="text-sm font-medium text-gray-600">Phone</label>
+                        <input name="phone" value={profile.phone || ""} onChange={handleChange}
+                            className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-green-500 outline-none transition" />
                     </div>
 
                     <div>
-                        <label className="text-sm font-medium text-gray-600">
-                            Date of Birth
-                        </label>
-                        <input
-                            type="date"
-                            name="dateOfBirth"
-                            value={profile.dateOfBirth || ""}
-                            onChange={handleChange}
-                            className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-green-500 outline-none transition"
-                        />
+                        <label className="text-sm font-medium text-gray-600">Date of Birth</label>
+                        <input type="date" name="dateOfBirth" value={profile.dateOfBirth || ""} onChange={handleChange}
+                            className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-green-500 outline-none transition" />
                     </div>
 
                     <div>
-                        <label className="text-sm font-medium text-gray-600">
-                            Gender
-                        </label>
-                        <select
-                            name="gender"
-                            value={profile.gender || ""}
-                            onChange={handleChange}
-                            className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-green-500 outline-none transition"
-                        >
+                        <label className="text-sm font-medium text-gray-600">Gender</label>
+                        <select name="gender" value={profile.gender || ""} onChange={handleChange}
+                            className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-green-500 outline-none transition">
                             <option value="">Select Gender</option>
                             <option value="Male">Male</option>
                             <option value="Female">Female</option>
@@ -324,30 +328,16 @@ export default function TeacherProfile() {
                 </div>
 
                 <div className="mt-8">
-                    <label className="text-sm font-medium text-gray-600">
-                        Address
-                    </label>
-                    <textarea
-                        name="address"
-                        value={profile.address || ""}
-                        onChange={handleChange}
-                        rows="4"
-                        className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-green-500 outline-none transition"
-                    ></textarea>
+                    <label className="text-sm font-medium text-gray-600">Address</label>
+                    <textarea name="address" value={profile.address || ""} onChange={handleChange} rows="4"
+                        className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-green-500 outline-none transition"></textarea>
                 </div>
 
-                {/* BUTTON */}
-
                 <div className="mt-8 flex justify-end">
-
-                    <button
-                        onClick={handleSubmit}
-                        disabled={updating}
-                        className="px-8 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-xl text-sm font-semibold shadow-md hover:shadow-lg transition disabled:bg-gray-400"
-                    >
+                    <button onClick={handleSubmit} disabled={updating}
+                        className="px-8 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl text-sm font-semibold shadow-md transition disabled:bg-gray-400">
                         {updating ? "Updating..." : "Update Profile"}
                     </button>
-
                 </div>
 
             </div>

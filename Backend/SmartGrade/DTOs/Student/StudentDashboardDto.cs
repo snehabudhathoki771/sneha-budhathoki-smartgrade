@@ -10,5 +10,7 @@
         public string Status { get; set; } = string.Empty;
         public int TotalExams { get; set; }
         public List<WeakSubjectDto> WeakSubjects { get; set; } = new();
+        public List<string> StrongSubjects { get; set; } = new();
+        public List<PerformanceTrendDto> PerformanceTrend { get; set; } = new();
     }
 }

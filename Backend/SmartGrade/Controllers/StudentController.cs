@@ -137,6 +137,12 @@ namespace SmartGrade.Controllers
                 var reportBytes = await _reportCardService
                     .GenerateReportByIdAsync(studentId.Value, examId);
 
+                // handle empty or null report
+                if (reportBytes == null || reportBytes.Length == 0)
+                {
+                    return NotFound("Report not available for this exam.");
+                }
+
                 return File(
                     reportBytes,
                     "application/pdf",
@@ -144,7 +150,13 @@ namespace SmartGrade.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(ex.Message);
+                // differentiate error types
+                if (ex.Message.Contains("No data found"))
+                {
+                    return NotFound(ex.Message);
+                }
+
+                return StatusCode(500, "An error occurred while generating the report.");
             }
         }
 
@@ -176,16 +188,21 @@ namespace SmartGrade.Controllers
             return Ok(feedback);
         }
 
+      
         // ================= PROFILE =================
 
         [HttpPut("profile")]
         [Consumes("multipart/form-data")]
         public async Task<IActionResult> UpdateProfile([FromForm] UpdateStudentProfileDto dto)
         {
+            // Get logged-in user ID
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
             if (string.IsNullOrEmpty(userId) || !int.TryParse(userId, out int studentId))
                 return Unauthorized("Invalid token.");
+
+            // check which user is being updated
+            Console.WriteLine("Updating DB user ID: " + studentId);
 
             var student = await _context.Users
                 .FirstOrDefaultAsync(u => u.Id == studentId && u.Role == "Student");
@@ -193,7 +210,8 @@ namespace SmartGrade.Controllers
             if (student == null)
                 return NotFound("Student not found.");
 
-            // Update fields
+            // ================= UPDATE FIELDS =================
+
             if (!string.IsNullOrWhiteSpace(dto.FullName))
                 student.FullName = dto.FullName;
 
@@ -206,7 +224,8 @@ namespace SmartGrade.Controllers
             if (dto.DateOfBirth.HasValue)
                 student.DateOfBirth = dto.DateOfBirth.Value;
 
-            // Photo upload
+            // ================= PHOTO UPLOAD =================
+
             if (dto.Photo != null && dto.Photo.Length > 0)
             {
                 var uploadFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
@@ -223,11 +242,21 @@ namespace SmartGrade.Controllers
                 }
 
                 student.PhotoUrl = "/uploads/" + fileName;
+
+                Console.WriteLine("Saved PhotoUrl: " + student.PhotoUrl);
             }
+            else
+            {
+                Console.WriteLine("No photo received from frontend");
+            }
+
+            // ================= SAVE TO DATABASE =================
 
             try
             {
                 await _context.SaveChangesAsync();
+
+                Console.WriteLine("Changes saved to database successfully");
             }
             catch (Exception ex)
             {

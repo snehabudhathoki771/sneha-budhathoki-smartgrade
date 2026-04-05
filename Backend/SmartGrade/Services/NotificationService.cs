@@ -24,12 +24,13 @@ namespace SmartGrade.Services
             int? referenceId = null,
             string? route = null)
         {
-            // Prevent duplicate unread notifications of same type
+            // Prevent duplicate unread notifications (within short time)
             var exists = await _context.Notifications
                 .AnyAsync(n =>
                     n.UserId == userId &&
                     n.Title == title &&
-                    !n.IsRead);
+                    !n.IsRead &&
+                    n.CreatedAt > DateTime.UtcNow.AddMinutes(-1));
 
             if (exists)
                 return;
@@ -55,7 +56,10 @@ namespace SmartGrade.Services
         public async Task<List<NotificationDto>> GetUserNotificationsAsync(int userId)
         {
             return await _context.Notifications
-                .Where(n => n.UserId == userId)
+                .Where(n =>
+                    n.UserId == userId
+                    || n.Type == "System"   // allow global admin notifications
+                )
                 .OrderByDescending(n => n.CreatedAt)
                 .Select(n => new NotificationDto
                 {
@@ -76,7 +80,10 @@ namespace SmartGrade.Services
         public async Task MarkAsReadAsync(int notificationId, int userId)
         {
             var notification = await _context.Notifications
-                .FirstOrDefaultAsync(n => n.Id == notificationId && n.UserId == userId);
+                .FirstOrDefaultAsync(n =>
+                    n.Id == notificationId &&
+                    (n.UserId == userId || n.Type == "System") // allow admin read
+                );
 
             if (notification == null)
                 return;
@@ -90,7 +97,10 @@ namespace SmartGrade.Services
         public async Task MarkAllAsReadAsync(int userId)
         {
             var notifications = await _context.Notifications
-                .Where(n => n.UserId == userId && !n.IsRead)
+                .Where(n =>
+                    (n.UserId == userId || n.Type == "System") &&
+                    !n.IsRead
+                )
                 .ToListAsync();
 
             foreach (var notification in notifications)
@@ -104,7 +114,10 @@ namespace SmartGrade.Services
         public async Task<int> GetUnreadCountAsync(int userId)
         {
             return await _context.Notifications
-                .CountAsync(n => n.UserId == userId && !n.IsRead);
+                .CountAsync(n =>
+                    (n.UserId == userId || n.Type == "System") &&
+                    !n.IsRead
+                );
         }
     }
 }

@@ -23,7 +23,7 @@ import {
   Tooltip
 } from "recharts";
 
-import { getStudentDashboard, getStudentResults, downloadExamReport} from "../../services/api";
+import { getStudentDashboard, getStudentResults, downloadExamReport } from "../../services/api";
 import { toast } from "react-toastify";
 
 export default function StudentDashboard() {
@@ -276,7 +276,7 @@ export default function StudentDashboard() {
             Weak
           </div>
           <h2 className="text-2xl font-semibold mt-3 text-red-500">
-            {data.weakSubjectsCount}
+            {data.weakSubjects?.length || 0}
           </h2>
         </div>
 
@@ -287,7 +287,7 @@ export default function StudentDashboard() {
             Strong
           </div>
           <h2 className="text-2xl font-semibold mt-3 text-emerald-500">
-            {data.strongSubjectsCount}
+            {data.strongSubjects?.length || 0}
           </h2>
         </div>
 
@@ -369,6 +369,32 @@ export default function StudentDashboard() {
                   Suggested: 3 extra study hours this week
                 </p>
               </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+
+      {/* STRONG SUBJECTS */}
+      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6">
+        <h2 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
+          <FaStar className="text-emerald-500" />
+          Strong Subjects
+        </h2>
+
+        {data.strongSubjects?.length === 0 ? (
+          <div className="text-slate-500 text-sm">
+            No strong subjects yet.
+          </div>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {data.strongSubjects.map((subject, index) => (
+              <span
+                key={index}
+                className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-sm font-medium"
+              >
+                {subject}
+              </span>
             ))}
           </div>
         )}
