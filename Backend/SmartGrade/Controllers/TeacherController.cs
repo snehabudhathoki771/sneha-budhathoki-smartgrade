@@ -117,7 +117,8 @@ namespace SmartGrade.Controllers
                 teacherId,
                 "Bulk Upload Completed",
                 $"Marks uploaded successfully for section '{section?.Name}'.",
-                "System"
+                "System",
+                "Teacher"
             );
 
             return Ok(new
@@ -408,6 +409,12 @@ namespace SmartGrade.Controllers
             await _auditService.LogAsync(
                 "Exam Created",
                 $"ExamId: {exam.Id}, Name: {exam.Name}"
+            );
+
+            await NotifyAdmins(
+                "Exam Created",
+                $"Teacher created exam '{exam.Name}'",
+                "Exam"
             );
 
             return Ok(new
@@ -858,25 +865,45 @@ namespace SmartGrade.Controllers
 
             foreach (var studentId in studentIds)
             {
-                //  Exam Published Notification
-                await _notificationService.CreateAsync(
-                    studentId,
-                    "Exam Published",
-                    $"Your teacher has published {exam.Name}.",
-                    "Exam",
-                    exam.Id,
-                    "/student/results"
+                // Check Exam Published already exists
+                var examExists = await _context.Notifications.AnyAsync(n =>
+                    n.UserId == studentId &&
+                    n.Title == "Exam Published" &&
+                    n.ReferenceId == exam.Id
                 );
 
-                //  Results Published Notification
-                await _notificationService.CreateAsync(
-                    studentId,
-                    "Results Published",
-                    $"Your results for {exam.Name} are now available.",
-                    "Grade",
-                    exam.Id,
-                    "/student/results"
+                if (!examExists)
+                {
+                    await _notificationService.CreateAsync(
+                        studentId,
+                        "Exam Published",
+                        $"Your teacher has published {exam.Name}.",
+                        "Exam",
+                        "Student",
+                        exam.Id,
+                        "/student/results"
+                    );
+                }
+
+                // Check Results Published already exists
+                var resultExists = await _context.Notifications.AnyAsync(n =>
+                    n.UserId == studentId &&
+                    n.Title == "Results Published" &&
+                    n.ReferenceId == exam.Id
                 );
+
+                if (!resultExists)
+                {
+                    await _notificationService.CreateAsync(
+                        studentId,
+                        "Results Published",
+                        $"Your results for {exam.Name} are now available.",
+                        "Grade",
+                        "Student",
+                        exam.Id,
+                        "/student/results"
+                    );
+                }
             }
 
             await NotifyAdmins(
@@ -1147,6 +1174,7 @@ namespace SmartGrade.Controllers
                 "Bulk Upload Completed",
                 $"Bulk upload successful. {inserted} inserted, {skipped} skipped.",
                 "System",
+                "Teacher",
                 null,
                 "/teacher/marks"
             );
@@ -1290,15 +1318,15 @@ namespace SmartGrade.Controllers
                     return NotFound("Exam not found.");
 
                 if (exam.Status != "Published")
-                    return BadRequest("Exam is not published yet.");
+                    return BadRequest("Exam is not published before exporting PDF.");
 
                 var subjectResults = await _context.StudentSubjectResults
                     .Where(r => r.ExamId == examId)
                     .Include(r => r.Student)
                     .ToListAsync();
 
-                if (subjectResults.Count == 0)
-                    return BadRequest("No results found.");
+                if (!subjectResults.Any())
+                    return BadRequest(new { message = "No results available for this exam." });
 
                 // load grade scales BEFORE using
                 var gradeScales = await _context.GradeScales
@@ -1341,26 +1369,32 @@ namespace SmartGrade.Controllers
                         page.Size(QuestPDF.Helpers.PageSizes.A4);
                         page.Margin(30);
 
-                        page.Header().Background("#1F2A37").Padding(15).Column(header =>
+                        page.Header().Background("#1F2A37").PaddingVertical(20).PaddingHorizontal(25).Column(header =>
                         {
+                            header.Spacing(10);
+
                             header.Item().Row(row =>
                             {
-                                row.ConstantItem(60).Height(60).Image(logoPath);
+                                row.Spacing(15);
+
+                                row.ConstantItem(70).Height(70).Image(logoPath);
 
                                 row.RelativeItem().Column(c =>
                                 {
+                                    c.Spacing(5);
+
                                     c.Item().Text("SMARTGRADE INTERNATIONAL SCHOOL")
-                                        .FontSize(18)
+                                        .FontSize(20)
                                         .FontColor(Colors.White)
                                         .Bold();
 
                                     c.Item().Text("Exam Results Report")
-                                        .FontSize(11)
-                                        .FontColor(Colors.Grey.Lighten2);
+                                        .FontSize(12)
+                                        .FontColor(Colors.Grey.Lighten1);
                                 });
                             });
 
-                            header.Item().PaddingTop(5).LineHorizontal(3).LineColor(Colors.Yellow.Medium);
+                            header.Item().PaddingTop(10).LineHorizontal(3).LineColor(Colors.Yellow.Medium);
                         });
 
                         page.Content().PaddingTop(15).Column(col =>
@@ -1437,8 +1471,28 @@ namespace SmartGrade.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(ex.Message);
+                Console.WriteLine("PDF ERROR: " + ex.Message);
+
+                return StatusCode(500, new
+                {
+                    message = "Failed to generate PDF",
+                    error = ex.Message
+                });
             }
+        }
+
+        [HttpGet("exams/{examId}/status")]
+        public async Task<IActionResult> GetExamStatus(int examId)
+        {
+            var teacherId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+            var exam = await _context.Exams
+                .FirstOrDefaultAsync(e => e.Id == examId && e.CreatedBy == teacherId);
+
+            if (exam == null)
+                return NotFound("Exam not found");
+
+            return Ok(new { status = exam.Status });
         }
 
 
@@ -1516,7 +1570,8 @@ namespace SmartGrade.Controllers
                     adminId,
                     title,
                     message,
-                    type
+                    type,
+                    "Admin"
                 );
             }
         }

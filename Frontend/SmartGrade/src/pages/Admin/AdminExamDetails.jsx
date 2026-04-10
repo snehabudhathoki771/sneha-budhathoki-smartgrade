@@ -10,6 +10,9 @@ export default function AdminExamDetails() {
     const [exam, setExam] = useState(null);
     const [loading, setLoading] = useState(true);
 
+    // NEW CONFIRM MODAL STATE
+    const [confirmModal, setConfirmModal] = useState(false);
+
     const fetchExam = async () => {
         try {
             const res = await axios.get(
@@ -33,9 +36,20 @@ export default function AdminExamDetails() {
         fetchExam();
     }, [id]);
 
-    const handleDelete = async () => {
-        if (!window.confirm("Are you sure you want to delete this exam? This action cannot be undone.")) return;
+    //  UPDATED DELETE
+    const handleDelete = () => {
 
+        // BLOCK IF PUBLISHED
+        if (exam?.status?.toLowerCase() === "published") {
+            toast.warning("To delete this exam, please unpublish it first.");
+            return;
+        }
+
+        setConfirmModal(true);
+    };
+
+    //  CONFIRM DELETE
+    const confirmDelete = async () => {
         try {
             await axios.delete(
                 `https://localhost:7247/api/admin/exams/${id}`,
@@ -50,6 +64,8 @@ export default function AdminExamDetails() {
             navigate("/admin/exams");
         } catch {
             toast.error("Failed to delete exam.");
+        } finally {
+            setConfirmModal(false);
         }
     };
 
@@ -235,6 +251,40 @@ export default function AdminExamDetails() {
                     Delete Exam
                 </button>
             </div>
+
+            {/* CONFIRM MODAL */}
+            {confirmModal && (
+                <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50">
+                    <div className="bg-white w-full max-w-md rounded-2xl shadow-xl p-6">
+
+                        <h2 className="text-xl font-semibold mb-4">
+                            Confirmation
+                        </h2>
+
+                        <p className="text-gray-600 mb-6">
+                            Are you sure you want to delete this exam?
+                        </p>
+
+                        <div className="flex justify-end gap-3">
+
+                            <button
+                                onClick={() => setConfirmModal(false)}
+                                className="px-5 py-2 rounded-xl bg-gray-200"
+                            >
+                                No
+                            </button>
+
+                            <button
+                                onClick={confirmDelete}
+                                className="px-5 py-2 rounded-xl bg-red-500 text-white"
+                            >
+                                Yes
+                            </button>
+
+                        </div>
+                    </div>
+                </div>
+            )}
 
         </div>
     );

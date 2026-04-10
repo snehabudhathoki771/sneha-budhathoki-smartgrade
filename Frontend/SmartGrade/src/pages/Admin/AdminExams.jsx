@@ -1,7 +1,7 @@
-import { useEffect, useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { Trash2, Eye, Search } from "lucide-react";
+import { Eye, Search, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 
 export default function AdminExams() {
@@ -17,6 +17,14 @@ export default function AdminExams() {
     // PAGINATION
     const [currentPage, setCurrentPage] = useState(1);
     const examsPerPage = 10;
+
+    // NEW CONFIRM MODAL STATE
+    const [confirmModal, setConfirmModal] = useState({
+        open: false,
+        id: null,
+        action: null,
+        message: ""
+    });
 
     const navigate = useNavigate();
 
@@ -71,45 +79,69 @@ export default function AdminExams() {
         setCurrentPage(page);
     };
 
-    const handleDelete = async (id) => {
-        if (!window.confirm("Delete this exam permanently?")) return;
+    // HANDLE CONFIRM ACTION
+    const handleConfirmAction = async () => {
+        const { id, action } = confirmModal;
+
+        setConfirmModal({ open: false, id: null, action: null, message: "" });
 
         try {
-            toast.info("Deleting exam...");
-            await axios.delete(
-                `https://localhost:7247/api/admin/exams/${id}`,
-                {
-                    headers: {
-                        Authorization: `Bearer ${localStorage.getItem("token")}`,
-                    },
-                }
-            );
-            toast.success("Exam deleted successfully");
+            if (action === "delete") {
+                toast.info("Deleting exam...");
+                await axios.delete(
+                    `https://localhost:7247/api/admin/exams/${id}`,
+                    {
+                        headers: {
+                            Authorization: `Bearer ${localStorage.getItem("token")}`,
+                        },
+                    }
+                );
+                toast.success("Exam deleted successfully");
+            }
+
+            if (action === "unpublish") {
+                toast.info("Unpublishing exam...");
+                await axios.put(
+                    `https://localhost:7247/api/admin/exams/${id}/unpublish`,
+                    {},
+                    {
+                        headers: {
+                            Authorization: `Bearer ${localStorage.getItem("token")}`,
+                        },
+                    }
+                );
+                toast.success("Exam unpublished successfully");
+            }
+
             fetchExams();
         } catch {
-            toast.error("Failed to delete exam.");
+            toast.error("Action failed.");
         }
     };
 
-    const handleUnpublish = async (id) => {
-        if (!window.confirm("Force unpublish this exam?")) return;
+    const handleDelete = (exam) => {
 
-        try {
-            toast.info("Unpublishing exam...");
-            await axios.put(
-                `https://localhost:7247/api/admin/exams/${id}/unpublish`,
-                {},
-                {
-                    headers: {
-                        Authorization: `Bearer ${localStorage.getItem("token")}`,
-                    },
-                }
-            );
-            toast.success("Exam unpublished successfully");
-            fetchExams();
-        } catch {
-            toast.error("Failed to unpublish exam.");
+        // BLOCK DELETE IF PUBLISHED (FIXED)
+        if (exam.status?.toLowerCase() === "published") {
+            toast.warning("To delete this exam, please unpublish it first.");
+            return;
         }
+
+        setConfirmModal({
+            open: true,
+            id: exam.id,
+            action: "delete",
+            message: "Delete this exam permanently?"
+        });
+    };
+
+    const handleUnpublish = (id) => {
+        setConfirmModal({
+            open: true,
+            id,
+            action: "unpublish",
+            message: "Force unpublish this exam?"
+        });
     };
 
     const handlePublish = async (id) => {
@@ -252,18 +284,13 @@ export default function AdminExams() {
                                     <td className="px-6 py-5">
                                         <div className="flex justify-end items-center gap-3">
 
-                                            {/* VIEW */}
                                             <button
                                                 onClick={() => navigate(`/admin/exams/${exam.id}`)}
                                                 className="group p-2.5 rounded-xl bg-white border border-gray-200 shadow-sm hover:shadow-md hover:border-emerald-300 transition"
                                             >
-                                                <Eye
-                                                    size={16}
-                                                    className="text-gray-500 group-hover:text-emerald-600 transition"
-                                                />
+                                                <Eye size={16} className="text-gray-500 group-hover:text-emerald-600 transition" />
                                             </button>
 
-                                            {/* TOGGLE (REAL SWITCH STYLE) */}
                                             <button
                                                 onClick={() =>
                                                     exam.status === "Published"
@@ -283,15 +310,11 @@ export default function AdminExams() {
                                                 />
                                             </button>
 
-                                            {/* DELETE */}
                                             <button
-                                                onClick={() => handleDelete(exam.id)}
+                                                onClick={() => handleDelete(exam)}
                                                 className="group p-2.5 rounded-xl bg-white border border-gray-200 shadow-sm hover:shadow-md hover:border-red-300 transition"
                                             >
-                                                <Trash2
-                                                    size={16}
-                                                    className="text-gray-500 group-hover:text-red-600 transition"
-                                                />
+                                                <Trash2 size={16} className="text-gray-500 group-hover:text-red-600 transition" />
                                             </button>
 
                                         </div>
@@ -315,7 +338,6 @@ export default function AdminExams() {
 
                 </div>
 
-                {/* PAGINATION */}
                 <div className="flex justify-between items-center px-6 py-5 border-t bg-gray-50">
 
                     <p className="text-sm text-gray-500">
@@ -358,6 +380,42 @@ export default function AdminExams() {
                 </div>
 
             </div>
+
+            {/* CONFIRM MODAL */}
+            {confirmModal.open && (
+                <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50">
+                    <div className="bg-white w-full max-w-md rounded-2xl shadow-xl p-6">
+
+                        <h2 className="text-xl font-semibold mb-4">
+                            Confirmation
+                        </h2>
+
+                        <p className="text-gray-600 mb-6">
+                            {confirmModal.message}
+                        </p>
+
+                        <div className="flex justify-end gap-3">
+
+                            <button
+                                onClick={() =>
+                                    setConfirmModal({ open: false, id: null, action: null, message: "" })
+                                }
+                                className="px-5 py-2 rounded-xl bg-gray-200"
+                            >
+                                No
+                            </button>
+
+                            <button
+                                onClick={handleConfirmAction}
+                                className="px-5 py-2 rounded-xl bg-red-500 text-white"
+                            >
+                                Yes
+                            </button>
+
+                        </div>
+                    </div>
+                </div>
+            )}
 
         </div>
     );

@@ -30,9 +30,10 @@ namespace SmartGrade.Controllers
         public async Task<IActionResult> GetMyNotifications()
         {
             var userId = GetUserId();
+            var userRole = User.FindFirstValue(ClaimTypes.Role);
 
             var notifications = await _notificationService
-                .GetUserNotificationsAsync(userId);
+                .GetUserNotificationsAsync(userId, userRole);
 
             return Ok(notifications);
         }

@@ -18,15 +18,19 @@ export default function NotificationBell() {
 
     useEffect(() => {
         fetchUnreadCount();
-        fetchNotifications();
 
         const interval = setInterval(() => {
             fetchUnreadCount();
-            fetchNotifications();
         }, 30000);
 
         return () => clearInterval(interval);
     }, []);
+
+    useEffect(() => {
+        if (!open) return;
+
+        fetchNotifications();
+    }, [open]);
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -46,13 +50,29 @@ export default function NotificationBell() {
         try {
             const res = await getNotifications();
 
-            console.log("Notifications API:", res);
+            if (process.env.NODE_ENV === "development") {
+                console.log("Notifications:", res.data);
+            }
 
             const data = Array.isArray(res.data)
                 ? res.data
                 : res.data?.$values || [];
 
-            setNotifications(data);
+            // 🔥 DUPLICATE FILTER ADDED (ONLY ADDITION)
+            const uniqueMap = new Map();
+
+            data.forEach((n) => {
+                const key = `${n.title}-${n.referenceId}`;
+                if (!uniqueMap.has(key)) {
+                    uniqueMap.set(key, n);
+                }
+            });
+
+            const sorted = [...uniqueMap.values()]
+                .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+                .slice(0, 20);
+
+            setNotifications(sorted);
         } catch (err) {
             console.error("Notification fetch error:", err);
             setNotifications([]);
@@ -63,7 +83,9 @@ export default function NotificationBell() {
         try {
             const res = await getUnreadCount();
 
-            console.log("Unread count:", res);
+            if (process.env.NODE_ENV === "development") {
+                console.log("Unread count:", res.data);
+            }
 
             setUnreadCount(res.data);
         } catch (err) {
@@ -75,10 +97,17 @@ export default function NotificationBell() {
         try {
             await markNotificationRead(notification.id);
 
+            fetchUnreadCount();
+
             setOpen(false);
 
-            fetchNotifications();
-            fetchUnreadCount();
+            setNotifications((prev) =>
+                prev.map((n) =>
+                    n.id === notification.id ? { ...n, isRead: true } : n
+                )
+            );
+
+            setUnreadCount((prev) => Math.max(prev - 1, 0));
 
             if (notification.route) {
                 if (notification.referenceId) {
@@ -95,8 +124,14 @@ export default function NotificationBell() {
     const handleMarkAll = async () => {
         try {
             await markAllNotificationsRead();
-            fetchNotifications();
+
             fetchUnreadCount();
+
+            setNotifications((prev) =>
+                prev.map((n) => ({ ...n, isRead: true }))
+            );
+
+            setUnreadCount(0);
         } catch (err) {
             console.error("Mark all error:", err);
         }
@@ -136,7 +171,6 @@ export default function NotificationBell() {
     return (
         <div ref={bellRef} className="relative">
 
-            {/* BELL BUTTON */}
             <button
                 onClick={() => setOpen(!open)}
                 className="relative text-slate-600 hover:text-slate-800 transition"
@@ -150,11 +184,9 @@ export default function NotificationBell() {
                 )}
             </button>
 
-            {/* DROPDOWN */}
             {open && (
                 <div className="absolute right-0 mt-3 w-[380px] bg-white shadow-xl rounded-2xl border border-slate-200 z-50 overflow-hidden">
 
-                    {/* HEADER */}
                     <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200">
                         <h3 className="font-semibold text-slate-800 text-lg">
                             Notifications
@@ -179,10 +211,9 @@ export default function NotificationBell() {
                         </div>
                     </div>
 
-                    {/* BODY */}
                     {notifications.length === 0 ? (
                         <p className="text-sm text-slate-500 text-center py-8">
-                            No notifications available
+                            You're all caught up
                         </p>
                     ) : (
                         <div className="max-h-[400px] overflow-y-auto p-4 space-y-3 bg-slate-50">

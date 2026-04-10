@@ -1,10 +1,12 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SmartGrade.Data;
-using SmartGrade.Models;
 using SmartGrade.DTOs;
+using SmartGrade.Models;
+using SmartGrade.Services;
 using System.Security.Claims;
+
 
 namespace SmartGrade.Controllers
 {
@@ -14,10 +16,12 @@ namespace SmartGrade.Controllers
     public class FeedbackController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly NotificationService _notificationService;
 
-        public FeedbackController(AppDbContext context)
+        public FeedbackController(AppDbContext context, NotificationService notificationService )
         {
             _context = context;
+            _notificationService = notificationService;
         }
 
         //  GET ALL FEEDBACK 
@@ -79,6 +83,21 @@ namespace SmartGrade.Controllers
 
             _context.Feedbacks.Add(feedback);
             await _context.SaveChangesAsync();
+
+            // ================= NOTIFY STUDENT =================
+
+            var exam = await _context.Exams
+                .FirstOrDefaultAsync(e => e.Id == dto.ExamId);
+
+            await _notificationService.CreateAsync(
+                dto.StudentId,
+                "Feedback Received",
+                $"Your teacher has given feedback for {exam?.Name}.",
+                "Grade",
+                "Student",
+                dto.ExamId,
+                "/student/feedback"
+            );
 
             return Ok(new { message = "Feedback created successfully." });
         }

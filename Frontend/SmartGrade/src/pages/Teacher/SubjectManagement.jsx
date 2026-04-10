@@ -1,6 +1,6 @@
 import axios from "axios";
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 
 export default function SubjectManagement() {
   const { examId } = useParams();
@@ -12,7 +12,13 @@ export default function SubjectManagement() {
   const [editingId, setEditingId] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  //  FETCH SUBJECTS
+  // CONFIRM MODAL STATE
+  const [confirmModal, setConfirmModal] = useState({
+    open: false,
+    id: null
+  });
+
+  // FETCH SUBJECTS
   const fetchSubjects = async () => {
     try {
       setLoading(true);
@@ -41,7 +47,7 @@ export default function SubjectManagement() {
     }
   }, [examId]);
 
-  //  Add or update subject 
+  // Add or update subject 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -81,13 +87,19 @@ export default function SubjectManagement() {
     }
   };
 
-  //  DELETE SUBJECT 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Delete this subject?")) return;
+  // UPDATED DELETE
+  const handleDelete = (id) => {
+    setConfirmModal({
+      open: true,
+      id
+    });
+  };
 
+  // CONFIRM DELETE
+  const confirmDelete = async () => {
     try {
       await axios.delete(
-        `https://localhost:7247/api/teacher/subjects/${id}`,
+        `https://localhost:7247/api/teacher/subjects/${confirmModal.id}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -98,6 +110,8 @@ export default function SubjectManagement() {
       await fetchSubjects();
     } catch (err) {
       console.error(err);
+    } finally {
+      setConfirmModal({ open: false, id: null });
     }
   };
 
@@ -211,6 +225,40 @@ export default function SubjectManagement() {
         )}
 
       </div>
+
+      {/* CONFIRM MODAL */}
+      {confirmModal.open && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50">
+          <div className="bg-white w-full max-w-md rounded-2xl shadow-xl p-6">
+
+            <h2 className="text-xl font-semibold mb-4">
+              Confirmation
+            </h2>
+
+            <p className="text-gray-600 mb-6">
+              Delete this subject?
+            </p>
+
+            <div className="flex justify-end gap-3">
+
+              <button
+                onClick={() => setConfirmModal({ open: false, id: null })}
+                className="px-5 py-2 rounded-xl bg-gray-200"
+              >
+                No
+              </button>
+
+              <button
+                onClick={confirmDelete}
+                className="px-5 py-2 rounded-xl bg-red-500 text-white"
+              >
+                Yes
+              </button>
+
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

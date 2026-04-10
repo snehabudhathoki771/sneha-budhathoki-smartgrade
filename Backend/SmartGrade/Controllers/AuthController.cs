@@ -1,4 +1,5 @@
 ﻿using BCrypt.Net;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -21,15 +22,18 @@ namespace SmartGrade.Controllers
         private readonly AppDbContext _context;
         private readonly IConfiguration _configuration;
         private readonly EmailService _emailService;
+        private readonly NotificationService _notificationService;
 
         public AuthController(
             AppDbContext context,
             IConfiguration configuration,
-            EmailService emailService)
+            EmailService emailService,
+            NotificationService notificationService)
         {
             _context = context;
             _configuration = configuration;
             _emailService = emailService;
+            _notificationService = notificationService;
         }
 
         // POST: api/Auth/signup
@@ -50,11 +54,29 @@ namespace SmartGrade.Controllers
                 FullName = request.FullName,
                 Email = email,
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
-                Role = request.Role
+                Role = request.Role == "Teacher" ? "Teacher" : "Student"
             };
 
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
+
+            // get all admins
+            var admins = await _context.Users
+                .Where(u => u.Role == "Admin")
+                .Select(u => u.Id)
+                .ToListAsync();
+
+            // send notification to each admin
+            foreach (var adminId in admins)
+            {
+                await _notificationService.CreateAsync(
+                    adminId,
+                    "New User Created",
+                    $"A new {user.Role} account has been created: {user.FullName}",
+                    "System",
+                    "Admin"
+                );
+            }
 
             return Ok(new { message = "User registered successfully" });
         }
@@ -82,7 +104,7 @@ namespace SmartGrade.Controllers
             if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
                 return Unauthorized(new { message = "Invalid email or password." });
 
-            // auto re-activate (TEMP FIX)
+            // auto re-activate
             if (user.DeactivatedUntil.HasValue && user.DeactivatedUntil < DateTime.UtcNow)
             {
                 user.IsActive = true;
@@ -90,7 +112,7 @@ namespace SmartGrade.Controllers
                 await _context.SaveChangesAsync();
             }
 
-            // block inactive users (MAIN FIX)
+            // block inactive users
             if (!user.IsActive)
             {
                 // TEMPORARY DEACTIVATION
@@ -253,9 +275,9 @@ namespace SmartGrade.Controllers
             return Ok("Password reset successful.");
         }
 
-     
+
         // DEBUG
-        
+        [Authorize(Roles = "Admin")]
         [HttpGet("users")]
         public async Task<IActionResult> GetAllUsers()
         {

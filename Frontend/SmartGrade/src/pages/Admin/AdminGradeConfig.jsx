@@ -17,6 +17,12 @@ export default function AdminGradeConfig() {
 
     const [editingGrade, setEditingGrade] = useState(null);
 
+    // CONFIRM MODAL STATE
+    const [confirmModal, setConfirmModal] = useState({
+        open: false,
+        id: null
+    });
+
     const token = localStorage.getItem("token");
 
     const fetchGrades = async () => {
@@ -94,13 +100,19 @@ export default function AdminGradeConfig() {
         }
     };
 
-    const handleDelete = async (id) => {
-        if (!window.confirm("Are you sure you want to delete this grade?")) return;
+    const handleDelete = (id) => {
+        setConfirmModal({
+            open: true,
+            id
+        });
+    };
 
+    //  CONFIRM DELETE ACTION
+    const confirmDelete = async () => {
         try {
             setLoading(true);
             await axios.delete(
-                `https://localhost:7247/api/admin/grades/${id}`,
+                `https://localhost:7247/api/admin/grades/${confirmModal.id}`,
                 { headers: { Authorization: `Bearer ${token}` } }
             );
             setMessage("Grade deleted successfully");
@@ -109,6 +121,7 @@ export default function AdminGradeConfig() {
             setMessage("Error deleting grade");
         } finally {
             setLoading(false);
+            setConfirmModal({ open: false, id: null });
         }
     };
 
@@ -237,26 +250,18 @@ export default function AdminGradeConfig() {
                                             
                                             <div className="flex justify-end items-center gap-3">
 
-                                                {/* EDIT */}
                                                 <button
                                                     onClick={() => setEditingGrade(grade)}
                                                     className="group p-2.5 rounded-xl bg-white border border-gray-200 shadow-sm hover:shadow-md hover:border-emerald-300 hover:scale-105 active:scale-95 transition"
                                                 >
-                                                    <Pencil
-                                                        size={16}
-                                                        className="text-gray-500 group-hover:text-emerald-600 transition"
-                                                    />
+                                                    <Pencil size={16} className="text-gray-500 group-hover:text-emerald-600 transition" />
                                                 </button>
 
-                                                {/* DELETE */}
                                                 <button
                                                     onClick={() => handleDelete(grade.id)}
                                                     className="group p-2.5 rounded-xl bg-white border border-gray-200 shadow-sm hover:shadow-md hover:border-red-300 hover:scale-105 active:scale-95 transition"
                                                 >
-                                                    <Trash2
-                                                        size={16}
-                                                        className="text-gray-500 group-hover:text-red-600 transition"
-                                                    />
+                                                    <Trash2 size={16} className="text-gray-500 group-hover:text-red-600 transition" />
                                                 </button>
 
                                             </div>
@@ -340,6 +345,41 @@ export default function AdminGradeConfig() {
 
                         </div>
 
+                    </div>
+                )}
+
+                {/* CONFIRM DELETE MODAL */}
+                {confirmModal.open && (
+                    <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50">
+                        <div className="bg-white p-6 rounded-2xl w-[350px] shadow-lg">
+
+                            <h2 className="text-lg font-semibold mb-4">
+                                Confirm Delete
+                            </h2>
+
+                            <p className="text-gray-600 mb-6">
+                                Are you sure you want to delete this grade?
+                            </p>
+
+                            <div className="flex justify-end gap-3">
+
+                                <button
+                                    onClick={() => setConfirmModal({ open: false, id: null })}
+                                    className="px-4 py-2 bg-gray-200 rounded-xl"
+                                >
+                                    No
+                                </button>
+
+                                <button
+                                    onClick={confirmDelete}
+                                    className="px-4 py-2 bg-red-500 text-white rounded-xl"
+                                >
+                                    Yes
+                                </button>
+
+                            </div>
+
+                        </div>
                     </div>
                 )}
 

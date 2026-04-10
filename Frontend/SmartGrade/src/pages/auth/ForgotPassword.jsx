@@ -36,76 +36,43 @@ export default function ForgotPassword() {
   };
 
   return (
-    <div style={styles.container}>
-      <form onSubmit={handleSubmit} style={styles.card}>
-        <h2>Forgot Password</h2>
-        <p style={styles.info}>
+    <div className="min-h-screen flex items-center justify-center bg-slate-100 px-4">
+      <form
+        onSubmit={handleSubmit}
+        className="w-full max-w-md bg-white rounded-2xl shadow-lg p-8"
+      >
+        <h2 className="text-xl font-semibold text-slate-800 mb-2 text-center">
+          Forgot Password
+        </h2>
+
+        <p className="text-sm text-slate-500 mb-6 text-center">
           Enter your registered email address to reset your password.
         </p>
 
-        {error && <p style={styles.error}>{error}</p>}
-        {message && <p style={styles.success}>{message}</p>}
+        {error && (
+          <p className="text-red-500 text-sm mb-3 text-center">{error}</p>
+        )}
+
+        {message && (
+          <p className="text-green-600 text-sm mb-3 text-center">{message}</p>
+        )}
 
         <input
           type="email"
-          placeholder="Email address"
+          placeholder="Enter your email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          style={styles.input}
+          className="w-full px-4 py-3 mb-4 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         />
 
-        <button type="submit" style={styles.button} disabled={loading}>
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium transition disabled:opacity-70"
+        >
           {loading ? "Please wait..." : "Send Reset Link"}
         </button>
       </form>
     </div>
   );
 }
-
-/* Simple inline styles */
-const styles = {
-  container: {
-    minHeight: "100vh",
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    background: "#f4f6f8",
-  },
-  card: {
-    width: "360px",
-    padding: "30px",
-    borderRadius: "8px",
-    background: "#ffffff",
-    boxShadow: "0 4px 10px rgba(0,0,0,0.1)",
-    textAlign: "center",
-  },
-  info: {
-    fontSize: "14px",
-    color: "#555",
-    marginBottom: "10px",
-  },
-  input: {
-    width: "100%",
-    padding: "10px",
-    margin: "10px 0",
-    borderRadius: "4px",
-    border: "1px solid #ccc",
-  },
-  button: {
-    width: "100%",
-    padding: "10px",
-    background: "#2563eb",
-    color: "#fff",
-    border: "none",
-    borderRadius: "4px",
-    cursor: "pointer",
-  },
-  error: {
-    color: "red",
-    fontSize: "14px",
-  },
-  success: {
-    color: "green",
-    fontSize: "14px",
-  },
-};

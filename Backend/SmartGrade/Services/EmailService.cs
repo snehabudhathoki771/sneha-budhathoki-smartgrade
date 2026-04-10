@@ -49,19 +49,19 @@ namespace SmartGrade.Services
                 From = new MailAddress(senderEmail, senderName),
                 Subject = "SmartGrade – Password Reset",
                 Body = $@"
-Hello,
+                Hello,
 
-You requested a password reset for your SmartGrade account.
+                You requested a password reset for your SmartGrade account.
 
-Click the link below to reset your password:
-{resetLink}
+                Click the link below to reset your password:
+                {resetLink}
 
-This link will expire in 30 minutes.
+                This link will expire in 30 minutes.
 
-If you did not request this, please ignore this email.
+                If you did not request this, please ignore this email.
 
-– SmartGrade Team
-",
+                – SmartGrade Team
+                ",
                 IsBodyHtml = false
             };
 
@@ -107,18 +107,91 @@ If you did not request this, please ignore this email.
                 From = new MailAddress(senderEmail, senderName),
                 Subject = "SmartGrade – Your Password Has Been Reset",
                 Body = $@"
-Hello {fullName},
+                Hello {fullName},
 
-An administrator has reset your SmartGrade account password.
+                An administrator has reset your SmartGrade account password.
 
-Your new temporary password is:
+                Your new temporary password is:
 
-{newPassword}
+                {newPassword}
 
-Please login and change your password immediately.
+                Please login and change your password immediately.
 
-– SmartGrade Team
-",
+                – SmartGrade Team
+                ",
+                IsBodyHtml = false
+            };
+
+            mail.To.Add(toEmail);
+            smtp.Send(mail);
+        }
+
+        public void SendAccountDeactivatedEmail(string toEmail, string fullName, DateTime? until)
+        {
+            var smtpServer = _config["EmailSettings:SmtpServer"]
+                ?? throw new Exception("SMTP server not configured");
+
+            var portValue = _config["EmailSettings:Port"]
+                ?? throw new Exception("SMTP port not configured");
+
+            if (!int.TryParse(portValue, out int port))
+            {
+                throw new Exception("Invalid SMTP port configuration");
+            }
+
+            var username = _config["EmailSettings:Username"]
+                ?? throw new Exception("SMTP username not configured");
+
+            var password = _config["EmailSettings:Password"]
+                ?? throw new Exception("SMTP password not configured");
+
+            var senderEmail = _config["EmailSettings:SenderEmail"]
+                ?? throw new Exception("Sender email not configured");
+
+            var senderName = _config["EmailSettings:SenderName"] ?? "SmartGrade";
+
+            using var smtp = new SmtpClient
+            {
+                Host = smtpServer,
+                Port = port,
+                EnableSsl = true,
+                Credentials = new NetworkCredential(username, password)
+            };
+
+            string message;
+
+            if (until.HasValue)
+            {
+                message = $@"
+                Hello {fullName},
+
+                Your account has been temporarily deactivated by the administrator.
+
+                Deactivation period until: {until.Value:dd MMM yyyy}
+
+                Please contact the admin for assistance.
+
+                – SmartGrade Team
+                ";
+            }
+            else
+            {
+                message = $@"
+                Hello {fullName},
+
+                Your account has been permanently deactivated by the administrator.
+
+                Please contact the admin for assistance.
+
+                – SmartGrade Team
+                ";
+            }
+
+            using var mail = new MailMessage
+            {
+                From = new MailAddress(senderEmail, senderName),
+                Subject = "SmartGrade – Account Deactivated",
+                Body = message,
                 IsBodyHtml = false
             };
 

@@ -38,6 +38,7 @@ export default function Results() {
   const [exams, setExams] = useState([]);
   const [selectedExam, setSelectedExam] = useState(examId || "");
   const [results, setResults] = useState([]);
+  const [examStatus, setExamStatus] = useState("");
 
   /* LOAD EXAMS */
 
@@ -87,6 +88,31 @@ export default function Results() {
 
   }, [selectedExam]);
 
+  /* LOAD EXAM STATUS */
+
+  useEffect(() => {
+
+    if (!selectedExam) {
+      setExamStatus("");
+      return;
+    }
+
+    axios
+      .get(
+        `https://localhost:7247/api/teacher/exams/${selectedExam}/status`,
+        { headers }
+      )
+      .then((res) => {
+        console.log("STATUS API RESPONSE:", res.data);
+        const status = res.data.status || res.data;
+        setExamStatus(String(status).toLowerCase());
+      })
+            .catch(() => {
+        setExamStatus("");
+      });
+
+  }, [selectedExam]);
+
   /* CALCULATIONS */
 
   const totalStudents = results.length;
@@ -129,7 +155,6 @@ export default function Results() {
 
   const COLORS = ["#16a34a", "#2563eb", "#f97316", "#dc2626"];
 
-  /* ✅ BACKEND PDF EXPORT (FIXED) */
 
   const handleExportPDF = async () => {
 
@@ -153,8 +178,29 @@ export default function Results() {
       document.body.appendChild(link);
       link.click();
 
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
     } catch (error) {
-      console.error("PDF download failed", error);
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const err = JSON.parse(reader.result);
+
+          alert(err.message || "PDF export failed");
+
+        } catch {
+          alert("PDF export failed");
+        }
+      };
+      if (error.response?.data instanceof Blob) {
+        reader.readAsText(error.response.data);
+      } else {
+        alert("Something went wrong");
+      }
+
+      console.error(error);
     }
   };
 
@@ -213,6 +259,29 @@ export default function Results() {
       {selectedExam && results.length > 0 && (
 
         <>
+
+          {examStatus !== "published" && (
+            <div className="mb-6 flex items-center justify-between bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+
+              <div className="flex items-center gap-3">
+
+                <div className="w-8 h-8 flex items-center justify-center rounded-full bg-red-100 text-red-600 font-bold">
+                  !
+                </div>
+
+                <div>
+                  <p className="text-sm font-semibold text-red-700">
+                    Exam not published
+                  </p>
+                  <p className="text-xs text-red-600">
+                    Publish the exam to enable PDF export.
+                  </p>
+                </div>
+
+              </div>
+
+            </div>
+          )}
 
           {/* STATS */}
 
@@ -322,7 +391,12 @@ export default function Results() {
 
               <button
                 onClick={handleExportPDF}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-xl text-sm transition"
+                disabled={examStatus !== "published"}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm transition 
+                  ${examStatus === "published"
+                    ? "bg-gray-100 hover:bg-gray-200"
+                    : "bg-gray-200 cursor-not-allowed opacity-60"
+                  }`}
               >
                 <Download size={16} />
                 Export PDF

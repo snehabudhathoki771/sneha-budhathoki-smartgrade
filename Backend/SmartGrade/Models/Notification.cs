@@ -33,5 +33,8 @@ namespace SmartGrade.Models
 
         [Column("route")]
         public string? Route { get; set; }
+
+        [Column("target_role")]
+        public string? TargetRole { get; set; } // Admin, Teacher, Student
     }
 }

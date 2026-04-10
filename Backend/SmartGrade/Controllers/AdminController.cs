@@ -58,26 +58,114 @@ namespace SmartGrade.Controllers
             });
         }
 
+        [HttpGet("dashboard-overview")]
+        public async Task<IActionResult> GetDashboardOverview()
+        {
+            var totalStudents = await _context.Users.CountAsync(u => u.Role == "Student");
+            var totalTeachers = await _context.Users.CountAsync(u => u.Role == "Teacher");
+            var totalAdmins = await _context.Users.CountAsync(u => u.Role == "Admin");
+
+            var totalExams = await _context.Exams.CountAsync();
+            var publishedExams = await _context.Exams.CountAsync(e => e.Status == "Published");
+
+            var systemAverage = await _context.StudentSubjectResults
+                .Where(r => r.Exam != null && r.Exam.Status == "Published")
+                .AverageAsync(r => (decimal?)r.FinalPercentage) ?? 0;
+
+            var atRiskStudents = await _context.StudentSubjectResults
+                .Where(r => r.Exam != null && r.Exam.Status == "Published")
+                .Where(r => r.FinalPercentage < 40)
+                .Select(r => r.StudentId)
+                .Distinct()
+                .CountAsync();
+
+            var subjectFailureRanking = await _context.StudentSubjectResults
+                .Include(r => r.Subject)
+                .Include(r => r.Exam)
+                .Where(r => r.Exam != null) // ensure exam exists
+                .Where(r => r.Exam.Status == "Published") //published exams
+                .GroupBy(r => new
+                {
+                    ExamId = r.ExamId,
+                    ExamName = r.Exam.Name,
+                    SubjectName = r.Subject != null ? r.Subject.Name : "Unknown Subject"
+                })
+                .Select(g => new
+                {
+                    exam = g.Key.ExamName,
+                    subject = g.Key.SubjectName,
+                    failureRate = g.Count() == 0
+                        ? 0
+                        : g.Count(x => x.FinalPercentage < 40) * 100.0 / g.Count()
+                })
+                    .OrderByDescending(x => x.failureRate)
+                    .ToListAsync();
+
+            var passCount = await _context.StudentSubjectResults
+                .Where(r => r.Exam != null && r.Exam.Status == "Published")
+                .CountAsync(r => r.FinalPercentage >= 40);
+
+            var failCount = await _context.StudentSubjectResults
+                .Where(r => r.Exam != null && r.Exam.Status == "Published")
+                .CountAsync(r => r.FinalPercentage < 40);
+
+            return Ok(new
+            {
+                stats = new
+                {
+                    totalStudents,
+                    totalTeachers,
+                    totalAdmins,
+                    totalExams,
+                    publishedExams
+                },
+
+                performance = new
+                {
+                    systemAverage,
+                    atRiskStudents
+                },
+
+                charts = new
+                {
+                    subjectFailureRanking,
+                    passCount,
+                    failCount
+                }
+            });
+        }
         // ================= GET USERS =================
 
         [HttpGet("users")]
         public async Task<IActionResult> GetAllUsers()
         {
             var users = await _context.Users
-                .Where(u => u.Role !="Admin")
-                .Select(u => new
-                {
-                    u.Id,
-                    u.FullName,
-                    u.Email,
-                    u.Role,
-                    u.IsActive,
-                    u.DeactivatedUntil,
-                    PhotoUrl = string.IsNullOrEmpty(u.PhotoUrl) ? null : u.PhotoUrl
-                })
+                .Where(u => u.Role != "Admin")
                 .ToListAsync();
 
-            return Ok(users);
+            foreach (var user in users)
+            {
+                if (user.DeactivatedUntil != null && user.DeactivatedUntil <= DateTime.UtcNow)
+                {
+                    user.IsActive = true;
+                    user.DeactivatedUntil = null;
+                }
+            }
+
+            await _context.SaveChangesAsync();
+
+            var result = users.Select(u => new
+            {
+                u.Id,
+                u.FullName,
+                u.Email,
+                u.Role,
+                u.IsActive,
+                u.DeactivatedUntil,
+                PhotoUrl = string.IsNullOrEmpty(u.PhotoUrl) ? null : u.PhotoUrl
+            });
+
+            return Ok(result);
         }
 
         // ================= CREATE USER =================
@@ -124,82 +212,6 @@ namespace SmartGrade.Controllers
             });
         }
 
-        [HttpGet("dashboard-overview")]
-        public async Task<IActionResult> GetDashboardOverview()
-        {
-            var totalStudents = await _context.Users.CountAsync(u => u.Role == "Student");
-            var totalTeachers = await _context.Users.CountAsync(u => u.Role == "Teacher");
-            var totalAdmins = await _context.Users.CountAsync(u => u.Role == "Admin");
-
-            var totalExams = await _context.Exams.CountAsync();
-            var publishedExams = await _context.Exams.CountAsync(e => e.Status == "Published");
-
-            var systemAverage = await _context.StudentSubjectResults
-                .Where(r => r.Exam != null && r.Exam.Status == "Published")
-                .AverageAsync(r => (decimal?)r.FinalPercentage) ?? 0;
-
-            var atRiskStudents = await _context.StudentSubjectResults
-                .Where(r => r.Exam != null && r.Exam.Status == "Published")
-                .Where(r => r.FinalPercentage < 40)
-                .Select(r => r.StudentId)
-                .Distinct()
-                .CountAsync();
-
-            var subjectFailureRanking = await _context.StudentSubjectResults
-                .Include(r => r.Subject)
-                .Include(r => r.Exam)
-                .Where(r => r.Exam != null) // ensure exam exists
-                .Where(r => r.Exam.Status == "Published") //published exams
-                .GroupBy(r => new
-                {
-                    ExamId = r.ExamId,
-                    ExamName = r.Exam.Name,
-                    SubjectName = r.Subject != null ? r.Subject.Name : "Unknown Subject"
-                })
-                .Select(g => new
-                {
-                    exam = g.Key.ExamName,
-                    subject = g.Key.SubjectName,
-                    failureRate = g.Count() == 0
-                        ? 0
-                        : g.Count(x => x.FinalPercentage < 40) * 100.0 / g.Count()
-                    })
-                    .OrderByDescending(x => x.failureRate)
-                    .ToListAsync();
-
-            var passCount = await _context.StudentSubjectResults
-                .Where(r => r.Exam != null && r.Exam.Status == "Published")
-                .CountAsync(r => r.FinalPercentage >= 40);
-
-            var failCount = await _context.StudentSubjectResults
-                .Where(r => r.Exam != null && r.Exam.Status == "Published")
-                .CountAsync(r => r.FinalPercentage < 40);
-
-            return Ok(new
-            {
-                stats = new
-                {
-                    totalStudents,
-                    totalTeachers,
-                    totalAdmins,
-                    totalExams,
-                    publishedExams
-                },
-
-                performance = new
-                {
-                    systemAverage,
-                    atRiskStudents
-                },
-
-                charts = new
-                {
-                    subjectFailureRanking,
-                    passCount,
-                    failCount
-                }
-            });
-        }
 
         // ================= DELETE USER =================
 
@@ -320,7 +332,8 @@ namespace SmartGrade.Controllers
                 exam.CreatedBy,
                 "Exam Unpublished by Admin",
                 $"Admin has unpublished your exam '{exam.Name}'.",
-                "Admin"
+                "Admin",
+                "Teacher"
             );
 
             await LogAction("Exam Force Unpublished", $"Exam: {exam.Name}");
@@ -396,14 +409,15 @@ namespace SmartGrade.Controllers
             await _context.SaveChangesAsync();
 
             // ===========================
-            // Notify Teacher (Owner)
+            // Notify Teacher 
             // ===========================
 
             await _notificationService.CreateAsync(
                 exam.CreatedBy,
                 "Exam Force Published by Admin",
                 $"Admin has published your exam '{exam.Name}'.",
-                "Admin"
+                "Admin",
+                "Teacher"
             );
 
             // ===========================
@@ -422,7 +436,8 @@ namespace SmartGrade.Controllers
                     studentId,
                     "Exam Published",
                     $"Your exam '{exam.Name}' has been published by admin.",
-                    "Exam"
+                    "Exam",
+                    "Student"
                 );
             }
 
@@ -923,14 +938,28 @@ namespace SmartGrade.Controllers
             }
             else
             {
-                user.DeactivatedUntil = null; 
+                user.DeactivatedUntil = null;
             }
 
             await _context.SaveChangesAsync();
 
+            _emailService.SendAccountDeactivatedEmail(
+                user.Email,
+                user.FullName,
+                user.DeactivatedUntil
+            );
+
+            // existing notification
+            await _notificationService.CreateAsync(
+                user.Id,
+                "Account Deactivated",
+                "Your account has been deactivated by admin.",
+                "Security",
+                "Student"
+            );
+
             return Ok(new { message = "User deactivated successfully" });
         }
-
 
         private async Task NotifyAllAdmins(string title, string message, string type)
         {
@@ -945,7 +974,8 @@ namespace SmartGrade.Controllers
                     adminId,
                     title,
                     message,
-                    type
+                    type,
+                    "Admin"
                 );
             }
         }

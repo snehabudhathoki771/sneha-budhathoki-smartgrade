@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
 import axios from "axios";
+import { useEffect, useState } from "react";
 import { Send, Trash2 } from "lucide-react";
 import { toast } from "react-toastify";
 
@@ -23,7 +23,10 @@ export default function Feedback() {
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  // ================= LOAD INITIAL DATA =================
+  const [confirmModal, setConfirmModal] = useState({
+    open: false,
+    id: null
+  });
 
   useEffect(() => {
     loadInitialData();
@@ -79,8 +82,6 @@ export default function Feedback() {
     }
   };
 
-  // ================= SEND FEEDBACK =================
-
   const handleSubmit = async () => {
 
     if (!selectedStudent || !selectedExam || !message.trim()) {
@@ -120,20 +121,19 @@ export default function Feedback() {
     }
   };
 
-  // ================= DELETE FEEDBACK =================
+  const handleDelete = (id) => {
+    setConfirmModal({
+      open: true,
+      id
+    });
+  };
 
-  const handleDelete = async (id) => {
-    const confirmDelete = window.confirm(
-      "Are you sure you want to delete this feedback?"
-    );
-
-    if (!confirmDelete) return;
-
+  const confirmDelete = async () => {
     try {
       toast.info("Deleting feedback...");
 
       await axios.delete(
-        `https://localhost:7247/api/teacher/feedback/${id}`,
+        `https://localhost:7247/api/teacher/feedback/${confirmModal.id}`,
         { headers }
       );
 
@@ -141,6 +141,8 @@ export default function Feedback() {
     } catch (error) {
       console.error("Error deleting feedback:", error);
       toast.error("Failed to delete feedback.");
+    } finally {
+      setConfirmModal({ open: false, id: null });
     }
   };
 
@@ -150,12 +152,9 @@ export default function Feedback() {
 
       <div className="max-w-7xl mx-auto space-y-6">
 
-        {/* HEADER */}
         <div>
-          
         </div>
 
-        {/* WRITE FEEDBACK */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
           <h2 className="text-lg font-semibold mb-4">
             Write Feedback
@@ -229,7 +228,6 @@ export default function Feedback() {
           </button>
         </div>
 
-        {/* RECENT FEEDBACK */}
         <div>
           <h2 className="text-xl font-semibold mb-4">
             Recent Feedback
@@ -289,6 +287,39 @@ export default function Feedback() {
         </div>
 
       </div>
+
+      {confirmModal.open && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50">
+          <div className="bg-white w-full max-w-md rounded-2xl shadow-xl p-6">
+
+            <h2 className="text-xl font-semibold mb-4">
+              Confirmation
+            </h2>
+
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to delete this feedback?
+            </p>
+
+            <div className="flex justify-end gap-3">
+
+              <button
+                onClick={() => setConfirmModal({ open: false, id: null })}
+                className="px-5 py-2 rounded-xl bg-gray-200"
+              >
+                No
+              </button>
+
+              <button
+                onClick={confirmDelete}
+                className="px-5 py-2 rounded-xl bg-red-500 text-white"
+              >
+                Yes
+              </button>
+
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

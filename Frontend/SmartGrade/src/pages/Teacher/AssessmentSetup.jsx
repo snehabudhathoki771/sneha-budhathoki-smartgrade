@@ -24,6 +24,12 @@ export default function AssessmentSetup() {
 
   const [loading, setLoading] = useState(false);
 
+  // CONFIRM MODAL STATE
+  const [confirmModal, setConfirmModal] = useState({
+    open: false,
+    id: null
+  });
+
   const fetchExams = async () => {
     try {
       const res = await axios.get(
@@ -170,14 +176,23 @@ export default function AssessmentSetup() {
 
   };
 
-  const handleDelete = async (id) => {
+  // UPDATED DELETE
+  const handleDelete = (id) => {
 
-    if (!window.confirm("Delete this section?")) return;
+    setConfirmModal({
+      open: true,
+      id
+    });
+
+  };
+
+  // CONFIRM DELETE
+  const confirmDelete = async () => {
 
     try {
       toast.info("Deleting section...");
       await axios.delete(
-        `https://localhost:7247/api/teacher/sections/${id}`,
+        `https://localhost:7247/api/teacher/sections/${confirmModal.id}`,
         { headers }
       );
       toast.success("Section deleted successfully");
@@ -186,6 +201,7 @@ export default function AssessmentSetup() {
     }
 
     fetchSections(selectedSubject);
+    setConfirmModal({ open: false, id: null });
 
   };
 
@@ -403,6 +419,40 @@ export default function AssessmentSetup() {
         </div>
 
       </div>
+
+      {/* CONFIRM MODAL */}
+      {confirmModal.open && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50">
+          <div className="bg-white w-full max-w-md rounded-2xl shadow-xl p-6">
+
+            <h2 className="text-xl font-semibold mb-4">
+              Confirmation
+            </h2>
+
+            <p className="text-gray-600 mb-6">
+              Delete this section?
+            </p>
+
+            <div className="flex justify-end gap-3">
+
+              <button
+                onClick={() => setConfirmModal({ open: false, id: null })}
+                className="px-5 py-2 rounded-xl bg-gray-200"
+              >
+                No
+              </button>
+
+              <button
+                onClick={confirmDelete}
+                className="px-5 py-2 rounded-xl bg-red-500 text-white"
+              >
+                Yes
+              </button>
+
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
 
