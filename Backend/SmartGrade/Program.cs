@@ -41,9 +41,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowReactApp", policy =>
     {
         policy
-            .SetIsOriginAllowed(origin =>
-                origin.Contains("vercel.app")
-            )
+            .WithOrigins("https://sneha-budhathoki-smartgrade-6xfv5hew2.vercel.app")
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
