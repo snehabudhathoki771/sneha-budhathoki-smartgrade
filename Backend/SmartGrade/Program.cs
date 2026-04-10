@@ -41,10 +41,12 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowReactApp", policy =>
     {
         policy
-            .WithOrigins("https://sneha-budhathoki-smartgrade-6xfv5hew2.vercel.app")
+            .SetIsOriginAllowed(origin =>
+                origin.Contains("vercel.app")
+            )
             .AllowAnyHeader()
-            .AllowAnyMethod()
-            .AllowCredentials();
+            .AllowAnyMethod();
+            
     });
 });
 
@@ -140,6 +142,7 @@ if (app.Environment.IsDevelopment())
 
 
 app.UseHttpsRedirection();
+app.UseRouting();
 
 // CORS BEFORE AUTH
 app.UseCors("AllowReactApp");
