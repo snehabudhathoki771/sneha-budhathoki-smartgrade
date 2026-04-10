@@ -1,4 +1,4 @@
-import axios from "axios";
+import api from "../../services/api";
 import { Eye, Search, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -8,17 +8,14 @@ export default function AdminExams() {
     const [exams, setExams] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    // FILTER STATES
     const [search, setSearch] = useState("");
     const [selectedYear, setSelectedYear] = useState("");
     const [selectedTeacher, setSelectedTeacher] = useState("");
     const [selectedStatus, setSelectedStatus] = useState("");
 
-    // PAGINATION
     const [currentPage, setCurrentPage] = useState(1);
     const examsPerPage = 10;
 
-    // NEW CONFIRM MODAL STATE
     const [confirmModal, setConfirmModal] = useState({
         open: false,
         id: null,
@@ -28,16 +25,10 @@ export default function AdminExams() {
 
     const navigate = useNavigate();
 
+    // FETCH EXAMS
     const fetchExams = async () => {
         try {
-            const res = await axios.get(
-                "https://localhost:7247/api/admin/exams",
-                {
-                    headers: {
-                        Authorization: `Bearer ${localStorage.getItem("token")}`,
-                    },
-                }
-            );
+            const res = await api.get("/admin/exams");
             setExams(res.data);
         } catch {
             toast.error("Failed to load exams.");
@@ -50,11 +41,7 @@ export default function AdminExams() {
         fetchExams();
     }, []);
 
-    // UNIQUE FILTER VALUES
-    const uniqueYears = [...new Set(exams.map(e => e.academicYear))];
-    const uniqueTeachers = [...new Set(exams.map(e => e.teacherName))];
-
-    // FILTER LOGIC
+    // FILTER DATA
     const filteredExams = useMemo(() => {
         return exams.filter(exam =>
             exam.name.toLowerCase().includes(search.toLowerCase()) &&
@@ -64,22 +51,17 @@ export default function AdminExams() {
         );
     }, [exams, search, selectedYear, selectedTeacher, selectedStatus]);
 
-    // RESET PAGE WHEN FILTER CHANGES
     useEffect(() => {
         setCurrentPage(1);
     }, [search, selectedYear, selectedTeacher, selectedStatus]);
 
-    // PAGINATION CALCULATIONS
     const totalPages = Math.ceil(filteredExams.length / examsPerPage);
-    const indexOfLastExam = currentPage * examsPerPage;
-    const indexOfFirstExam = indexOfLastExam - examsPerPage;
-    const currentExams = filteredExams.slice(indexOfFirstExam, indexOfLastExam);
+    const currentExams = filteredExams.slice(
+        (currentPage - 1) * examsPerPage,
+        currentPage * examsPerPage
+    );
 
-    const changePage = (page) => {
-        setCurrentPage(page);
-    };
-
-    // HANDLE CONFIRM ACTION
+    // ACTIONS
     const handleConfirmAction = async () => {
         const { id, action } = confirmModal;
 
@@ -87,43 +69,24 @@ export default function AdminExams() {
 
         try {
             if (action === "delete") {
-                toast.info("Deleting exam...");
-                await axios.delete(
-                    `https://localhost:7247/api/admin/exams/${id}`,
-                    {
-                        headers: {
-                            Authorization: `Bearer ${localStorage.getItem("token")}`,
-                        },
-                    }
-                );
-                toast.success("Exam deleted successfully");
+                await api.delete(`/admin/exams/${id}`);
+                toast.success("Exam deleted");
             }
 
             if (action === "unpublish") {
-                toast.info("Unpublishing exam...");
-                await axios.put(
-                    `https://localhost:7247/api/admin/exams/${id}/unpublish`,
-                    {},
-                    {
-                        headers: {
-                            Authorization: `Bearer ${localStorage.getItem("token")}`,
-                        },
-                    }
-                );
-                toast.success("Exam unpublished successfully");
+                await api.put(`/admin/exams/${id}/unpublish`, {});
+                toast.success("Exam unpublished");
             }
 
             fetchExams();
         } catch {
-            toast.error("Action failed.");
+            toast.error("Action failed");
         }
     };
 
     const handleDelete = (exam) => {
-
-        // BLOCK DELETE IF PUBLISHED (FIXED)
         if (exam.status?.toLowerCase() === "published") {
-            toast.warning("To delete this exam, please unpublish it first.");
+            toast.warning("Unpublish first");
             return;
         }
 
@@ -131,7 +94,7 @@ export default function AdminExams() {
             open: true,
             id: exam.id,
             action: "delete",
-            message: "Delete this exam permanently?"
+            message: "Delete this exam?"
         });
     };
 
@@ -140,39 +103,22 @@ export default function AdminExams() {
             open: true,
             id,
             action: "unpublish",
-            message: "Force unpublish this exam?"
+            message: "Unpublish this exam?"
         });
     };
 
     const handlePublish = async (id) => {
         try {
-            toast.info("Publishing exam...");
-            await axios.put(
-                `https://localhost:7247/api/admin/exams/${id}/publish`,
-                {},
-                {
-                    headers: {
-                        Authorization: `Bearer ${localStorage.getItem("token")}`,
-                    },
-                }
-            );
-            toast.success("Exam published successfully");
+            await api.put(`/admin/exams/${id}/publish`, {});
+            toast.success("Exam published");
             fetchExams();
         } catch {
-            toast.error("Failed to publish exam.");
+            toast.error("Failed to publish");
         }
     };
 
-    if (loading) {
-        return (
-            <div className="flex justify-center items-center h-52">
-                <div className="animate-pulse text-gray-400 text-lg">
-                    Loading exams...
-                </div>
-            </div>
-        );
-    }
-
+    if (loading) return <div>Loading...</div>;
+    
     return (
         <div className="space-y-6">
 
@@ -270,8 +216,8 @@ export default function AdminExams() {
 
                                     <td className="px-6 py-5">
                                         <span className={`px-3 py-1 text-xs font-semibold rounded-full ${exam.status === "Published"
-                                                ? "bg-emerald-100 text-emerald-600"
-                                                : "bg-yellow-100 text-yellow-600"
+                                            ? "bg-emerald-100 text-emerald-600"
+                                            : "bg-yellow-100 text-yellow-600"
                                             }`}>
                                             {exam.status}
                                         </span>
@@ -298,14 +244,14 @@ export default function AdminExams() {
                                                         : handlePublish(exam.id)
                                                 }
                                                 className={`relative w-11 h-6 rounded-full transition ${exam.status === "Published"
-                                                        ? "bg-emerald-500"
-                                                        : "bg-gray-300"
+                                                    ? "bg-emerald-500"
+                                                    : "bg-gray-300"
                                                     }`}
                                             >
                                                 <span
                                                     className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow-md transition ${exam.status === "Published"
-                                                            ? "translate-x-5"
-                                                            : ""
+                                                        ? "translate-x-5"
+                                                        : ""
                                                         }`}
                                                 />
                                             </button>
@@ -359,8 +305,8 @@ export default function AdminExams() {
                                 key={index}
                                 onClick={() => changePage(index + 1)}
                                 className={`px-4 py-2 rounded-xl ${currentPage === index + 1
-                                        ? "bg-emerald-500 text-white shadow-md"
-                                        : "bg-gray-200 hover:bg-gray-300"
+                                    ? "bg-emerald-500 text-white shadow-md"
+                                    : "bg-gray-200 hover:bg-gray-300"
                                     }`}
                             >
                                 {index + 1}

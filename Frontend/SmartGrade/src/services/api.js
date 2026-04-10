@@ -1,9 +1,10 @@
 import axios from "axios";
 
-const api = axios.create({
-  baseURL: "https://localhost:7247/api",
-});
+const API = import.meta.env.VITE_API_URL;
 
+const api = axios.create({
+  baseURL: `${API}/api`,
+});
 
 // ================= REQUEST INTERCEPTOR =================
 // Attach access token automatically
@@ -53,7 +54,7 @@ api.interceptors.response.use(
       try {
 
         const response = await axios.post(
-          "https://localhost:7247/api/Auth/refresh-token",
+          `${API}/api/auth/refresh-token`,
           { refreshToken }
         );
 

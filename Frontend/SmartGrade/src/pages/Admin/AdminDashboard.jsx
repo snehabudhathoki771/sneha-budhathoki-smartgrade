@@ -1,4 +1,4 @@
-import axios from "axios";
+import api from "../../services/api";
 import {
   AlertTriangle,
   CheckCircle,
@@ -33,19 +33,14 @@ export default function AdminDashboard() {
   useEffect(() => {
     const fetchDashboard = async () => {
       try {
-        const overview = await axios.get(
-          "https://localhost:7247/api/admin/dashboard-overview",
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+        const overview = await api.get("/admin/dashboard-overview");
 
-        const passFailRes = await axios.get(
-          "https://localhost:7247/api/admin/analytics/pass-fail",
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+        const passFailRes = await api.get("/admin/analytics/pass-fail", {
+          headers: { Authorization: `Bearer ${token}` }
+        });
 
-        const subjectAvgRes = await axios.get(
-          "https://localhost:7247/api/admin/analytics/average-score-subject",
-          { headers: { Authorization: `Bearer ${token}` } }
+        const subjectAvgRes = await api.get("/admin/analytics/average-score-subject", {
+          headers: { Authorization: `Bearer ${token}` }         }
         );
 
         setData(overview.data);

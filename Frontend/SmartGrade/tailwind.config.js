@@ -4,7 +4,7 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Arial', 'sans-serif'],   // 🔥 this is the main fix
+        sans: ['Arial', 'sans-serif'],   //  this is the main fix
       },
 
       colors: {

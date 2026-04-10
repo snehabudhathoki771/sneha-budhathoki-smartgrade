@@ -1,7 +1,8 @@
-import axios from "axios";
+import api from "../../services/api";
 import { BookUser, Eye, GraduationCap, KeyRound, Pencil, Search, Shield, UserPlus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 
 export default function AdminUsers() {
 
@@ -34,7 +35,6 @@ export default function AdminUsers() {
         role: "",
     });
 
-    const token = localStorage.getItem("token");
     const currentUserId = Number(localStorage.getItem("userId"));
 
     const fetchUsers = async () => {
@@ -43,12 +43,7 @@ export default function AdminUsers() {
 
             setLoading(true);
 
-            const res = await axios.get(
-                `${import.meta.env.VITE_API_URL}/admin/users`,
-                {
-                    headers: { Authorization: `Bearer ${token}` },
-                }
-            );
+            const res = await api.get("/admin/users");
 
             setUsers(res.data);
 
@@ -125,11 +120,7 @@ export default function AdminUsers() {
 
             setLoading(true);
 
-            await axios.post(
-                `${import.meta.env.VITE_API_URL}/admin/users`,
-                form,
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
+            await api.post("/admin/users", form);
 
             setForm({
                 fullName: "",
@@ -169,11 +160,9 @@ export default function AdminUsers() {
 
             setLoading(true);
 
-            await axios.put(
-                `${import.meta.env.VITE_API_URL}/admin/users/${resetUserId}/reset-password`,
-                { newPassword: resetPassword },
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
+            await api.put(`/admin/users/${resetUserId}/reset-password`, {
+                newPassword: resetPassword
+            });
 
             setMessage("Password reset successful");
 
@@ -203,16 +192,9 @@ export default function AdminUsers() {
                 days: deactivateDays
             };
 
-            await axios.put(
-                `${import.meta.env.VITE_API_URL}/admin/users/${deactivateUserId.id}/deactivate`,
-                payload,
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                        "Content-Type": "application/json"
-                    }
-                }
-            );
+            await api.put(`/admin/users/${deactivateUserId.id}/deactivate`, {
+                days: deactivateDays
+            });
 
             setMessage("User deactivated successfully");
             setDeactivateUserId(null);
@@ -258,39 +240,32 @@ export default function AdminUsers() {
 
         }
 
-        if (!window.confirm("Are you sure you want to change this user's role?")) {
+        toast.info(
+            <div>
+                <p>Are you sure you want to change this user's role?</p>
+                <div className="flex gap-2 mt-2">
+                    <button
+                        onClick={async () => {
+                            await api.put(`/admin/users/${editingUser.id}`, editForm);
+                            setEditingUser(null);
+                            setMessage("User updated successfully");
+                            fetchUsers();
+                            toast.dismiss();
+                        }}
+                        className="px-3 py-1 bg-green-500 text-white rounded"
+                    >
+                        Yes
+                    </button>
 
-            return;
-
-        }
-
-        try {
-
-            setLoading(true);
-
-            await axios.put(
-                `${import.meta.env.VITE_API_URL}/admin/users/${editingUser.id}`,
-                editForm,
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
-
-            setEditingUser(null);
-
-            setMessage("User updated successfully");
-
-            fetchUsers();
-
-        } catch (err) {
-
-            setMessage(err.response?.data || "Error updating user");
-
-        } finally {
-
-            setLoading(false);
-
-        }
-
-    };
+                    <button
+                        onClick={() => toast.dismiss()}
+                        className="px-3 py-1 bg-gray-300 rounded"
+                    >
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        );
 
     const roleIcon = (role) => {
         if (role === "Admin") return <Shield size={14} className="mr-1" />;
@@ -308,15 +283,11 @@ export default function AdminUsers() {
     return (
 
         <div>
-
             {message && (
 
                 <div className="fixed top-6 right-6 bg-gradient-to-r from-emerald-500 to-green-600 text-white px-6 py-3 rounded-2xl shadow-xl z-50">
-
                     {message}
-
                 </div>
-
             )}
 
             <div className="space-y-6">
@@ -733,12 +704,7 @@ export default function AdminUsers() {
                                 ) : (
                                     <button
                                         onClick={async () => {
-                                            await axios.put(
-                                                `${import.meta.env.VITE_API_URL}/admin/users/${deactivateUserId.id}/activate`,
-                                                {},
-                                                { headers: { Authorization: `Bearer ${token}` } }
-                                            );
-                                            setDeactivateUserId(null);
+                                            await api.put(`/admin/users/${deactivateUserId.id}/activate`, {}); setDeactivateUserId(null);
                                             fetchUsers();
                                         }}
                                         className="px-5 py-2 rounded-xl bg-green-600 text-white hover:bg-green-700"
@@ -911,4 +877,5 @@ export default function AdminUsers() {
         </div>
 
     );
+}
 }

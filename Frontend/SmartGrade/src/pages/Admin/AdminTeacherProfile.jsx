@@ -1,34 +1,30 @@
-import axios from "axios";
+import api from "../../services/api";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
+import { toast } from "react-toastify";
 
 export default function AdminTeacherProfile() {
 
     const { id } = useParams();
     const navigate = useNavigate();
 
-    const token = localStorage.getItem("token");
-
     const [teacher, setTeacher] = useState(null);
     const [loading, setLoading] = useState(true);
+
+    const BASE_URL = import.meta.env.VITE_API_URL;
 
     const fetchTeacher = async () => {
 
         try {
 
-            const res = await axios.get(
-                `https://localhost:7247/api/admin/teachers/${id}`,
-                {
-                    headers: { Authorization: `Bearer ${token}` }
-                }
-            );
+            const res = await api.get(`/admin/teachers/${id}`);
 
             setTeacher(res.data);
 
         } catch {
 
-            alert("Failed to load teacher details");
+            toast.error("Failed to load teacher details");
 
         } finally {
 
@@ -108,7 +104,7 @@ export default function AdminTeacherProfile() {
                     <img
                         src={
                             teacher.photoUrl
-                                ? `https://localhost:7247${teacher.photoUrl}`
+                                ? `${BASE_URL}${teacher.photoUrl}`
                                 : "https://cdn-icons-png.flaticon.com/512/149/149071.png"
                         }
                         alt="Teacher"

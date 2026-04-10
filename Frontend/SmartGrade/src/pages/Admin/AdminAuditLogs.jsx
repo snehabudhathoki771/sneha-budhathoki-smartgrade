@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
+import api from "../../services/api";
 import { Search } from "lucide-react";
 
 export default function AdminAuditLogs() {
@@ -16,10 +16,7 @@ export default function AdminAuditLogs() {
 
     const fetchLogs = async () => {
         try {
-            const res = await axios.get(
-                "https://localhost:7247/api/admin/audit-logs",
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
+            const res = await api.get("/admin/audit-logs");
 
             setLogs(res.data);
         } catch (err) {

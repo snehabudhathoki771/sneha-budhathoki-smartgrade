@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
+import api from "../../services/api";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 
@@ -11,9 +11,7 @@ export default function AdminUserProfile() {
 
     const [user, setUser] = useState(null);
 
-    const token = localStorage.getItem("token");
-
-    const BASE_URL = "https://localhost:7247";
+    const BASE_URL = import.meta.env.VITE_API_URL;
 
     useEffect(() => {
         fetchUser();
@@ -23,14 +21,7 @@ export default function AdminUserProfile() {
 
         try {
 
-            const res = await axios.get(
-                `https://localhost:7247/api/admin/students/${id}`,
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`
-                    }
-                }
-            );
+            const res = await api.get(`/admin/students/${id}`);
 
             setUser(res.data);
 
@@ -49,8 +40,8 @@ export default function AdminUserProfile() {
     }
 
     const imageUrl = user.photoUrl
-        ? encodeURI(`${BASE_URL}${user.photoUrl}`)
-        : null;
+    ? encodeURI(`${BASE_URL}${user.photoUrl}`)
+    : null;
 
     const initials = user.fullName
         ? user.fullName

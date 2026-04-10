@@ -1,6 +1,4 @@
-import axios from "axios";
 import { useMemo, useState } from "react";
-import { toast } from "react-toastify";
 import {
   FaArrowLeft,
   FaChalkboardTeacher,
@@ -10,7 +8,9 @@ import {
   FaUserShield,
 } from "react-icons/fa";
 import { Link, useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 import logo from "../../assets/SGlogo.png";
+import { signup } from "../../services/authService";
 
 const ROLE_META = {
   Student: { icon: <FaUserGraduate />, bg: "bg-sky-500" },
@@ -45,23 +45,23 @@ export default function Signup() {
       setLoading(true);
       toast.info("Creating your account...");
 
-      const response = await axios.post(
-        "https://localhost:7247/api/Auth/signup",
-        {
-          fullName,
-          email,
-          password,
-          role,
-        }
-      );
+      const response = await signup({
+        fullName,
+        email,
+        password,
+        role
+      });
 
       toast.success(response.data || "Account created successfully");
       navigate("/login");
       toast.info("Redirecting to login...");
+
     } catch (err) {
       toast.error(err.response?.data || "Signup failed");
+
     } finally {
       setLoading(false);
+      
     }
   };
 

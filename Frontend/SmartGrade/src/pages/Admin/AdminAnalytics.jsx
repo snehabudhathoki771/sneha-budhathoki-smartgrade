@@ -1,5 +1,10 @@
-import axios from "axios";
 import { useEffect, useMemo, useState } from "react";
+import {
+    FaChartBar,
+    FaClipboardList,
+    FaGraduationCap,
+    FaUsers
+} from "react-icons/fa";
 import { toast } from "react-toastify";
 import {
     Bar,
@@ -13,12 +18,7 @@ import {
     XAxis,
     YAxis
 } from "recharts";
-import {
-    FaChartBar,
-    FaClipboardList,
-    FaGraduationCap,
-    FaUsers
-} from "react-icons/fa";
+import api from "../../services/api";
 
 function ChartCard({ title, children }) {
     return (
@@ -78,22 +78,10 @@ export default function AdminAnalytics() {
 
             const [examsRes, passRes, subjectRes, teacherRes] =
                 await Promise.all([
-                    axios.get(
-                        "https://localhost:7247/api/admin/analytics/exams-per-year",
-                        { headers }
-                    ),
-                    axios.get(
-                        "https://localhost:7247/api/admin/analytics/pass-fail",
-                        { headers }
-                    ),
-                    axios.get(
-                        "https://localhost:7247/api/admin/analytics/average-score-subject",
-                        { headers }
-                    ),
-                    axios.get(
-                        "https://localhost:7247/api/admin/analytics/teacher-performance",
-                        { headers }
-                    )
+                    api.get("/admin/analytics/exams-per-year"),
+                    api.get("/admin/analytics/pass-fail"),
+                    api.get("/admin/analytics/average-score-subject"),
+                    api.get("/admin/analytics/teacher-performance"),
                 ]);
 
             setExamsPerYear(examsRes.data);
@@ -112,13 +100,11 @@ export default function AdminAnalytics() {
         try {
             toast.info("Preparing report...");
 
-            const response = await axios.get(
-                "https://localhost:7247/api/admin/analytics/report",
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`
-                    },
-                    responseType: "blob"
+            const response = await api.get("/admin/analytics/report", {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                },
+                responseType: "blob"
                 }
             );
 
@@ -192,7 +178,7 @@ export default function AdminAnalytics() {
             <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4">
 
                 <div>
-            
+
                 </div>
 
                 <button

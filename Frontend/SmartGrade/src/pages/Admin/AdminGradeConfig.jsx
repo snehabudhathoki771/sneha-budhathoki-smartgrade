@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
+import api from "../../services/api";
 import { Pencil, Trash2, PlusCircle } from "lucide-react";
 
 export default function AdminGradeConfig() {
@@ -23,15 +23,10 @@ export default function AdminGradeConfig() {
         id: null
     });
 
-    const token = localStorage.getItem("token");
-
     const fetchGrades = async () => {
         try {
             setLoading(true);
-            const res = await axios.get(
-                "https://localhost:7247/api/admin/grades",
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
+            const res = await api.get("/admin/grades");
             setGrades(res.data);
         } catch {
             setMessage("Error loading grades");
@@ -61,11 +56,7 @@ export default function AdminGradeConfig() {
 
         try {
             setLoading(true);
-            await axios.post(
-                "https://localhost:7247/api/admin/grades",
-                form,
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
+            await api.post("/admin/grades", form);
             setForm({
                 gradeName: "",
                 minPercentage: "",
@@ -85,11 +76,7 @@ export default function AdminGradeConfig() {
     const handleUpdate = async () => {
         try {
             setLoading(true);
-            await axios.put(
-                `https://localhost:7247/api/admin/grades/${editingGrade.id}`,
-                editingGrade,
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
+            await api.put(`/admin/grades/${editingGrade.id}`, editingGrade);
             setEditingGrade(null);
             setMessage("Grade updated successfully");
             fetchGrades();
@@ -111,10 +98,7 @@ export default function AdminGradeConfig() {
     const confirmDelete = async () => {
         try {
             setLoading(true);
-            await axios.delete(
-                `https://localhost:7247/api/admin/grades/${confirmModal.id}`,
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
+            await api.delete(`/admin/grades/${confirmModal.id}`);
             setMessage("Grade deleted successfully");
             fetchGrades();
         } catch {

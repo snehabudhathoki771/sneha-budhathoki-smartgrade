@@ -1,4 +1,4 @@
-import axios from "axios";
+import api from "../../services/api";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -15,14 +15,7 @@ export default function AdminExamDetails() {
 
     const fetchExam = async () => {
         try {
-            const res = await axios.get(
-                `https://localhost:7247/api/admin/exams/${id}`,
-                {
-                    headers: {
-                        Authorization: `Bearer ${localStorage.getItem("token")}`,
-                    },
-                }
-            );
+            const res = await api.get(`/admin/exams/${id}`);
             setExam(res.data);
         } catch (err) {
             console.error(err);
@@ -31,7 +24,6 @@ export default function AdminExamDetails() {
             setLoading(false);
         }
     };
-
     useEffect(() => {
         fetchExam();
     }, [id]);
@@ -51,14 +43,7 @@ export default function AdminExamDetails() {
     //  CONFIRM DELETE
     const confirmDelete = async () => {
         try {
-            await axios.delete(
-                `https://localhost:7247/api/admin/exams/${id}`,
-                {
-                    headers: {
-                        Authorization: `Bearer ${localStorage.getItem("token")}`,
-                    },
-                }
-            );
+            await api.delete(`/admin/exams/${id}`);
             toast.success("Exam deleted successfully");
 
             navigate("/admin/exams");
@@ -71,18 +56,11 @@ export default function AdminExamDetails() {
 
     const handleUnpublish = async () => {
         try {
-            await axios.put(
-                `https://localhost:7247/api/admin/exams/${id}/unpublish`,
-                {},
-                {
-                    headers: {
-                        Authorization: `Bearer ${localStorage.getItem("token")}`,
-                    },
-                }
-            );
-            toast.success("Exam unpublished successfully");
+            await api.put(`/admin/exams/${id}/unpublish`, {});
 
+            toast.success("Exam unpublished successfully");
             fetchExam();
+
         } catch {
             toast.error("Failed to unpublish exam.");
         }
@@ -90,15 +68,8 @@ export default function AdminExamDetails() {
 
     const handlePublish = async () => {
         try {
-            await axios.put(
-                `https://localhost:7247/api/admin/exams/${id}/publish`,
-                {},
-                {
-                    headers: {
-                        Authorization: `Bearer ${localStorage.getItem("token")}`,
-                    },
-                }
-            );
+            await api.put(`/admin/exams/${id}/publish`, {});
+
             fetchExam();
             toast.success("Exam published successfully");
 
@@ -159,11 +130,10 @@ export default function AdminExamDetails() {
                         Status
                     </span>
                     <span
-                        className={`px-4 py-1 text-xs rounded-full font-semibold ${
-                            exam.status === "Published"
-                                ? "bg-green-100 text-green-600"
-                                : "bg-yellow-100 text-yellow-600"
-                        }`}
+                        className={`px-4 py-1 text-xs rounded-full font-semibold ${exam.status === "Published"
+                            ? "bg-green-100 text-green-600"
+                            : "bg-yellow-100 text-yellow-600"
+                            }`}
                     >
                         {exam.status}
                     </span>

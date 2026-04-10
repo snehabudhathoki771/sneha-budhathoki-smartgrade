@@ -1,36 +1,46 @@
 import api from "./api";
 
-//  LOGIN 
+// ================= LOGIN =================
 export const login = async (email, password) => {
-  const response = await api.post("/Auth/login", {
-    email,
-    password,
-  });
+  try {
+    const response = await api.post("/auth/login", {
+      email,
+      password,
+    });
 
-  const { token, refreshToken, user } = response.data;
+    const { token, refreshToken, user } = response.data;
 
-  // Store auth data
-  localStorage.setItem("token", token);
-  localStorage.setItem("refreshToken", refreshToken);
-  localStorage.setItem("user", JSON.stringify(user));
+    // Store auth data
+    localStorage.setItem("token", token);
+    localStorage.setItem("refreshToken", refreshToken);
+    localStorage.setItem("user", JSON.stringify(user));
 
-  return user; // used for navigation
+    return user; // used for navigation
+  } catch (error) {
+    console.error("Login error:", error.response?.data || error.message);
+    throw error;
+  }
 };
 
-//  SIGNUP 
+// ================= SIGNUP =================
 export const signup = async (data) => {
-  const response = await api.post("/Auth/signup", data);
-  return response.data;
+  try {
+    const response = await api.post("/auth/signup", data);
+    return response.data;
+  } catch (error) {
+    console.error("Signup error:", error.response?.data || error.message);
+    throw error;
+  }
 };
 
-//  LOGOUT 
+// ================= LOGOUT =================
 export const logout = () => {
   localStorage.removeItem("token");
   localStorage.removeItem("refreshToken");
   localStorage.removeItem("user");
 };
 
-//  HELPERS 
+// ================= HELPERS =================
 export const getToken = () => localStorage.getItem("token");
 
 export const getRefreshToken = () =>
@@ -43,7 +53,7 @@ export const getUser = () => {
 
 export const isAuthenticated = () => !!getToken();
 
-// Optional helpers
+// ================= ROLE CHECK =================
 export const hasRole = (role) => {
   const user = getUser();
   return user?.role === role;
