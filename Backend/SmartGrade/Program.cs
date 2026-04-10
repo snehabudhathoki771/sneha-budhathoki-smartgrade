@@ -42,9 +42,12 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowReactApp", policy =>
     {
         policy
-            .AllowAnyOrigin()
+            .WithOrigins(
+                "https://sneha-budhathoki-smartgrade.vercel.app"
+            )
             .AllowAnyHeader()
-            .AllowAnyMethod();
+            .AllowAnyMethod()
+            .AllowCredentials();
     });
 });
 
