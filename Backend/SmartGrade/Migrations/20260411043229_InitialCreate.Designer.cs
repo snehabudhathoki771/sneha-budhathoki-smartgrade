@@ -12,8 +12,8 @@ using SmartGrade.Data;
 namespace SmartGrade.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260225091035_AddAuditLogTable")]
-    partial class AddAuditLogTable
+    [Migration("20260411043229_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -67,6 +67,7 @@ namespace SmartGrade.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("Details")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("PerformedBy")
@@ -158,7 +159,7 @@ namespace SmartGrade.Migrations
                     b.ToTable("Feedbacks");
                 });
 
-            modelBuilder.Entity("SmartGrade.Models.Notification", b =>
+            modelBuilder.Entity("SmartGrade.Models.GradeScale", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -169,21 +170,78 @@ namespace SmartGrade.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<bool>("IsRead")
+                    b.Property<double>("GpaValue")
+                        .HasColumnType("double precision");
+
+                    b.Property<string>("GradeName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
+
+                    b.Property<double>("MaxPercentage")
+                        .HasColumnType("double precision");
+
+                    b.Property<double>("MinPercentage")
+                        .HasColumnType("double precision");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("GradeScales");
+                });
+
+            modelBuilder.Entity("SmartGrade.Models.Notification", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_read");
 
                     b.Property<string>("Message")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("message");
+
+                    b.Property<int?>("ReferenceId")
+                        .HasColumnType("integer")
+                        .HasColumnName("reference_id");
+
+                    b.Property<string>("Route")
+                        .HasColumnType("text")
+                        .HasColumnName("route");
+
+                    b.Property<string>("TargetRole")
+                        .HasColumnType("text")
+                        .HasColumnName("target_role");
 
                     b.Property<string>("Title")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("title");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("type");
 
                     b.Property<int>("UserId")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("user_id");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("UserId");
 
                     b.ToTable("Notifications");
                 });
@@ -303,6 +361,18 @@ namespace SmartGrade.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("Address")
+                        .HasColumnType("text")
+                        .HasColumnName("address");
+
+                    b.Property<DateTime?>("DateOfBirth")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("date_of_birth");
+
+                    b.Property<DateTime?>("DeactivatedUntil")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deactivated_until");
+
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasColumnType("text")
@@ -313,9 +383,34 @@ namespace SmartGrade.Migrations
                         .HasColumnType("text")
                         .HasColumnName("fullname");
 
+                    b.Property<string>("Gender")
+                        .HasColumnType("text")
+                        .HasColumnName("gender");
+
+                    b.Property<string>("GuardianName")
+                        .HasColumnType("text")
+                        .HasColumnName("guardian_name");
+
+                    b.Property<string>("GuardianPhone")
+                        .HasColumnType("text")
+                        .HasColumnName("guardian_phone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
                     b.Property<string>("PasswordHash")
+                        .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("passwordhash");
+
+                    b.Property<string>("Phone")
+                        .HasColumnType("text")
+                        .HasColumnName("phone");
+
+                    b.Property<string>("PhotoUrl")
+                        .HasColumnType("text")
+                        .HasColumnName("photourl");
 
                     b.Property<string>("RefreshToken")
                         .HasColumnType("text")
@@ -340,10 +435,7 @@ namespace SmartGrade.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("users", null, t =>
-                        {
-                            t.ExcludeFromMigrations();
-                        });
+                    b.ToTable("Users", (string)null);
                 });
 
             modelBuilder.Entity("SmartGrade.Models.AssessmentSection", b =>
@@ -393,6 +485,17 @@ namespace SmartGrade.Migrations
                     b.Navigation("Student");
 
                     b.Navigation("Teacher");
+                });
+
+            modelBuilder.Entity("SmartGrade.Models.Notification", b =>
+                {
+                    b.HasOne("SmartGrade.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("SmartGrade.Models.StudentMark", b =>

@@ -1,14 +1,10 @@
-import axios from "axios";
+import api from "../../services/api";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 
 export default function AssessmentSetup() {
 
   const token = localStorage.getItem("token");
-
-  const headers = {
-    Authorization: `Bearer ${token}`
-  };
 
   const [exams, setExams] = useState([]);
   const [subjects, setSubjects] = useState([]);
@@ -32,10 +28,7 @@ export default function AssessmentSetup() {
 
   const fetchExams = async () => {
     try {
-      const res = await axios.get(
-        "https://localhost:7247/api/teacher/exams",
-        { headers }
-      );
+      const res = await api.get("/teacher/exams")
       setExams(res.data);
     } catch {
       toast.error("Failed to load exams");
@@ -44,10 +37,7 @@ export default function AssessmentSetup() {
 
   const fetchSubjects = async (examId) => {
     try {
-      const res = await axios.get(
-        `https://localhost:7247/api/teacher/exams/${examId}/subjects`,
-        { headers }
-      );
+      const res = await api.get(`/teacher/exams/${examId}/subjects`)
       setSubjects(res.data);
     } catch {
       toast.error("Failed to load subjects");
@@ -56,10 +46,7 @@ export default function AssessmentSetup() {
 
   const fetchSections = async (subjectId) => {
     try {
-      const res = await axios.get(
-        `https://localhost:7247/api/teacher/subjects/${subjectId}/sections`,
-        { headers }
-      );
+      const res = await api.get(`/teacher/subjects/${subjectId}/sections`);
       setSections(res.data);
     } catch {
       toast.error("Failed to load sections");
@@ -135,30 +122,22 @@ export default function AssessmentSetup() {
 
       if (editingId) {
 
-        await axios.put(
-          `https://localhost:7247/api/teacher/sections/${editingId}`,
-          {
-            name: sectionName.trim(),
-            weightage: Number(weightage),
-            maxMarks: Number(maxMarks)
-          },
-          { headers }
-        );
+        awaitapi.put(`/teacher/sections/${editingId}`, {
+          name: sectionName.trim(),
+          weightage: Number(weightage),
+          maxMarks: Number(maxMarks)
+        });
         toast.success("Section updated successfully");
         setEditingId(null);
 
       } else {
 
-        await axios.post(
-          "https://localhost:7247/api/teacher/section",
-          {
-            name: sectionName.trim(),
-            weightage: Number(weightage),
-            maxMarks: Number(maxMarks),
-            subjectId: Number(selectedSubject)
-          },
-          { headers }
-        );
+        await api.post("/teacher/section", {
+          name: sectionName.trim(),
+          weightage: Number(weightage),
+          maxMarks: Number(maxMarks),
+          subjectId: Number(selectedSubject)
+        });
         toast.success("Section added successfully");
 
       }
@@ -191,10 +170,7 @@ export default function AssessmentSetup() {
 
     try {
       toast.info("Deleting section...");
-      await axios.delete(
-        `https://localhost:7247/api/teacher/sections/${confirmModal.id}`,
-        { headers }
-      );
+      await api.delete(`/teacher/sections/${confirmModal.id}`);
       toast.success("Section deleted successfully");
     } catch (error) {
       toast.error(error.response?.data || "Error deleting section.");

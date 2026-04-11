@@ -432,10 +432,7 @@ namespace SmartGrade.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("users", null, t =>
-                        {
-                            t.ExcludeFromMigrations();
-                        });
+                    b.ToTable("Users", (string)null);
                 });
 
             modelBuilder.Entity("SmartGrade.Models.AssessmentSection", b =>

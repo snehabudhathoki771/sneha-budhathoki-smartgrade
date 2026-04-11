@@ -28,9 +28,7 @@ namespace SmartGrade.Data
             // IMPORTANT:
             // users table already exists in DB
             // EF should use it but NEVER try to create / rename it
-            modelBuilder
-                .Entity<User>()
-                .ToTable("users", t => t.ExcludeFromMigrations());
+            modelBuilder.Entity<User>().ToTable("Users");
 
             // Relationships
             modelBuilder.Entity<StudentMark>()

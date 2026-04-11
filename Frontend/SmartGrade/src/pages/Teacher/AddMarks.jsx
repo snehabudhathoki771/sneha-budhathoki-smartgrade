@@ -1,7 +1,7 @@
-import axios from "axios";
+import { BarChart3 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { BarChart3 } from "lucide-react";
+import api from "../../services/api";
 
 export default function AddMarks() {
 
@@ -11,10 +11,6 @@ export default function AddMarks() {
   useEffect(() => {
     if (!token) navigate("/login");
   }, [token, navigate]);
-
-  const headers = {
-    Authorization: `Bearer ${token}`,
-  };
 
   const [exams, setExams] = useState([]);
   const [subjects, setSubjects] = useState([]);
@@ -35,7 +31,7 @@ export default function AddMarks() {
 
   const safeGet = async (url, setter) => {
     try {
-      const res = await axios.get(url, { headers });
+      const res = await api.get(url);
       setter(res.data);
     } catch (err) {
       if (err.response?.status === 401) {
@@ -68,7 +64,7 @@ export default function AddMarks() {
   };
 
   useEffect(() => {
-    safeGet("https://localhost:7247/api/teacher/exams", setExams);
+    safeGet("/teacher/exams", setExams);
   }, []);
 
   useEffect(() => {
@@ -82,9 +78,7 @@ export default function AddMarks() {
     }
 
     safeGet(
-      `https://localhost:7247/api/teacher/exams/${selectedExam}/subjects`,
-      setSubjects
-    );
+      `/teacher/exams/${selectedExam}/subjects`, setSubjects);
 
     setSelectedSubject("");
     setSelectedSection("");
@@ -99,16 +93,13 @@ export default function AddMarks() {
       return;
     }
 
-    safeGet(
-      `https://localhost:7247/api/teacher/subjects/${selectedSubject}/sections`,
-      setSections
-    );
+    safeGet(`/teacher/subjects/${selectedSubject}/sections`, setSections);
 
   }, [selectedSubject]);
 
   useEffect(() => {
 
-    safeGet("https://localhost:7247/api/teacher/students", (data) => {
+    safeGet("/teacher/students", (data) => {
 
       setStudents(data);
 
@@ -127,11 +118,7 @@ export default function AddMarks() {
 
     if (!selectedSection) return;
 
-    axios
-      .get(
-        `https://localhost:7247/api/teacher/marks/${selectedSection}`,
-        { headers }
-      )
+    api.get(`/teacher/marks/${selectedSection}`)
       .then((res) => {
 
         const existingMarks = res.data;
@@ -240,10 +227,9 @@ export default function AddMarks() {
         maxMarks: Number(selectedSectionObj.maxMarks)
       }));
 
-      const res = await axios.post(
-        "https://localhost:7247/api/teacher/marks/bulk",
-        payload,
-        { headers }
+      const res = await api.post(
+        "/teacher/marks/bulk",
+        payload
       );
 
       setSuccessMessage(
