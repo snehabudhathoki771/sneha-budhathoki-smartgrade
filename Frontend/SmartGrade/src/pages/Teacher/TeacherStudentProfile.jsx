@@ -6,6 +6,10 @@ import api from "../../services/api";
 
 export default function TeacherStudentProfile() {
 
+  const navigate = useNavigate();
+  const { id } = useParams();
+  const [data, setData] = useState(null);
+
   useEffect(() => {
     const token = localStorage.getItem("token");
 
@@ -14,18 +18,12 @@ export default function TeacherStudentProfile() {
     }
   }, [navigate]);
 
-  const { id } = useParams();
-  const navigate = useNavigate();
-
-  const [data, setData] = useState(null);
-
   useEffect(() => {
     fetchStudent();
-  }, []);
+  }, [id]);
 
   const fetchStudent = async () => {
     try {
-
       const res = await api.get(`/teacher/students/${id}/full-profile`);
       setData(res.data);
 

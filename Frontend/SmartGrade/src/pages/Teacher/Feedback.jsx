@@ -2,6 +2,7 @@ import { Send, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import api from "../../services/api";
+import { useNavigate } from "react-router-dom";
 
 export default function Feedback() {
 
@@ -63,7 +64,7 @@ export default function Feedback() {
 
   const loadFeedback = async () => {
     try {
-      const res = await api.get("/teacher/feedback");
+      const res = await api.get("/feedback");
 
       setFeedbackList(res.data);
 
@@ -88,7 +89,7 @@ export default function Feedback() {
     try {
       setSubmitting(true);
 
-      await api.post("/teacher/feedback", {
+      await api.post("/feedback", {
         studentId: parseInt(selectedStudent),
         examId: parseInt(selectedExam),
         subject: subject || null,
@@ -124,7 +125,7 @@ export default function Feedback() {
     try {
       toast.info("Deleting feedback...");
 
-      await api.delete(`/teacher/feedback/${confirmModal.id}`);
+      await api.delete(`/feedback/${confirmModal.id}`);
       toast.success("Feedback deleted");
 
       await loadFeedback();

@@ -5,7 +5,9 @@ import { toast } from "react-toastify";
 import api from "../../services/api";
 
 export default function TeacherStudents() {
-
+    
+    const navigate = useNavigate();
+    
     useEffect(() => {
         const token = localStorage.getItem("token");
 
@@ -17,7 +19,7 @@ export default function TeacherStudents() {
     const [students, setStudents] = useState([]);
     const [search, setSearch] = useState("");
 
-    const navigate = useNavigate();
+    
 
     useEffect(() => {
         fetchStudents();

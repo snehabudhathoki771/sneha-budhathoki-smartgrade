@@ -1,21 +1,36 @@
-import api from "../../services/api";
 import {
     CheckCircle,
     FileText,
     Upload
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import api from "../../services/api";
 
 export default function BulkUpload() {
+    
+    const navigate = useNavigate();
+
+    const [exams, setExams] = useState([]);
+    const [subjects, setSubjects] = useState([]);
+    const [sections, setSections] = useState([]);
+
+    const [selectedExam, setSelectedExam] = useState("");
+    const [selectedSubject, setSelectedSubject] = useState("");
+    const [selectedSection, setSelectedSection] = useState("");
+
+    const [file, setFile] = useState(null);
+    const [previewData, setPreviewData] = useState(null);
+    const [loading, setLoading] = useState(false);
 
     useEffect(() => {
         const token = localStorage.getItem("token");
 
         if (!token) {
-            window.location.href = "/login";
+            navigate("/login");
         }
-    }, []);
+    }, [navigate]);
 
     useEffect(() => {
         api.get("/teacher/exams")
@@ -38,18 +53,6 @@ export default function BulkUpload() {
             .then(res => setSections(res.data))
             .catch(() => toast.error("Failed to load sections"));
     }, [selectedSubject]);
-
-    const [exams, setExams] = useState([]);
-    const [subjects, setSubjects] = useState([]);
-    const [sections, setSections] = useState([]);
-
-    const [selectedExam, setSelectedExam] = useState("");
-    const [selectedSubject, setSelectedSubject] = useState("");
-    const [selectedSection, setSelectedSection] = useState("");
-
-    const [file, setFile] = useState(null);
-    const [previewData, setPreviewData] = useState(null);
-    const [loading, setLoading] = useState(false);
 
     const handlePreview = async () => {
         if (!file || !selectedSection) {

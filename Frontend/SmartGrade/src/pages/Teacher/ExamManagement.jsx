@@ -10,13 +10,7 @@ import api from "../../services/api";
 
 export default function ExamManagement() {
 
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-
-    if (!token) {
-      navigate("/login");
-    }
-  }, [navigate]);
+  const navigate = useNavigate();
 
   const [exams, setExams] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -26,8 +20,14 @@ export default function ExamManagement() {
   });
   const [editingExamId, setEditingExamId] = useState(null);
   const [confirmModal, setConfirmModal] = useState(null);
+  
+  useEffect(() => {
+    const token = localStorage.getItem("token");
 
-  const navigate = useNavigate();
+    if (!token) {
+      navigate("/login");
+    }
+  }, [navigate]);
 
   const fetchExams = async () => {
     try {
@@ -56,7 +56,7 @@ export default function ExamManagement() {
         toast.success("Exam updated");
         setEditingExamId(null);
       } else {
-        await api.post("/teacher/exam", form);
+        await api.post("/teacher/exams", form);
         toast.success("Exam created");
       }
 
