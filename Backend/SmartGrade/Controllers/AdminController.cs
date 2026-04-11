@@ -630,7 +630,7 @@ namespace SmartGrade.Controllers
                 .OrderByDescending(x => x.Average)
                 .ToListAsync();
 
-            int totalStudents = passCount + failCount;
+            int totalEvaluations = passCount + failCount;
 
             decimal averageScore = avgPerSubject.Any()
                 ? Math.Round(avgPerSubject.Average(x => x.Average), 2)
@@ -640,8 +640,8 @@ namespace SmartGrade.Controllers
                 ? Math.Round(avgPerSubject.Max(x => x.Average), 2)
                 : 0;
 
-            int passRate = totalStudents > 0
-                ? (int)((passCount * 100.0) / totalStudents)
+            int passRate = totalEvaluations > 0
+                ? (int)((passCount * 100.0) / totalEvaluations)
                 : 0;
 
             var topSubject = avgPerSubject.OrderByDescending(x => x.Average).FirstOrDefault();
@@ -697,7 +697,7 @@ namespace SmartGrade.Controllers
                         // ================= KPI =================
                         col.Item().Background(Colors.Grey.Lighten3).Padding(10).Column(c =>
                         {
-                            c.Item().Text($"Total Students: {totalStudents}");
+                            c.Item().Text($"Total Evaluations: {totalEvaluations}");
                             c.Item().Text($"Average Score: {averageScore}%");
                             c.Item().Text($"Highest Score: {highestScore}%");
                             c.Item().Text($"Pass Rate: {passRate}%");
