@@ -60,13 +60,13 @@ export default function AdminAnalytics() {
 
     const navigate = useNavigate();
 
-    useEffect(() => {
-        const token = localStorage.getItem("token");
+    const token = localStorage.getItem("token");
 
+    useEffect(() => {
         if (!token) {
             navigate("/login");
         }
-    }, [navigate]);
+    }, [navigate, token]);
 
     const [examsPerYear, setExamsPerYear] = useState([]);
     const [passFail, setPassFail] = useState({ passed: 0, failed: 0 });
@@ -76,8 +76,10 @@ export default function AdminAnalytics() {
 
 
     useEffect(() => {
-        fetchAnalytics();
-    }, []);
+        if (token) {
+            fetchAnalytics();
+        }
+    }, [token]);
 
     const fetchAnalytics = async () => {
         try {
@@ -89,10 +91,10 @@ export default function AdminAnalytics() {
 
             const [examsRes, passRes, subjectRes, teacherRes] =
                 await Promise.all([
-                    api.get("/admin/analytics/exams-per-year"),
-                    api.get("/admin/analytics/pass-fail"),
-                    api.get("/admin/analytics/average-score-subject"),
-                    api.get("/admin/analytics/teacher-performance"),
+                    api.get("/admin/analytics/exams-per-year", { headers }),
+                    api.get("/admin/analytics/pass-fail", { headers }),
+                    api.get("/admin/analytics/average-score-subject", { headers }),
+                    api.get("/admin/analytics/teacher-performance", { headers }),
                 ]);
 
             setExamsPerYear(examsRes.data);
@@ -112,7 +114,10 @@ export default function AdminAnalytics() {
             toast.info("Preparing report...");
 
             const response = await api.get("/admin/analytics/report", {
-                responseType: "blob"
+                responseType: "blob",
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
             });
 
             const url = window.URL.createObjectURL(new Blob([response.data]));
@@ -141,7 +146,7 @@ export default function AdminAnalytics() {
 
     const filteredTeachers = useMemo(() => {
         return teacherPerf.filter((teacher) => (teacher.averageScore || 0) > 0)
-        
+
     }, [teacherPerf]);
 
     const totalExams = examsPerYear.reduce(
@@ -237,80 +242,86 @@ export default function AdminAnalytics() {
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
 
                 <ChartCard title="Exams Per Academic Year">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={examsPerYear}>
-                            <XAxis dataKey="year" />
-                            <YAxis />
-                            <Tooltip />
-                            <Bar dataKey="count" fill="#10b981" radius={[6, 6, 0, 0]} />
-                        </BarChart>
-                    </ResponsiveContainer>
+                    {examsPerYear.length > 0 ? (
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={examsPerYear}>
+                                <XAxis dataKey="year" />
+                                <YAxis />
+                                <Tooltip />
+                                <Bar dataKey="count" fill="#10b981" />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    ) : (
+                        <div className="flex items-center justify-center h-full text-gray-400">
+                            No data available
+                        </div>
+                    )}
                 </ChartCard>
 
                 <ChartCard title="Pass / Fail Distribution">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                            <Pie
-                                data={passFailData}
-                                dataKey="value"
-                                nameKey="name"
-                                cx="50%"
-                                cy="50%"
-                                outerRadius={90}
-                                label
-                            >
-                                {passFailData.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={COLORS[index]} />
-                                ))}
-                            </Pie>
-                            <Tooltip />
-                            <Legend />
-                        </PieChart>
-                    </ResponsiveContainer>
+                    {(passFail.passed + passFail.failed) > 0 ? (
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <Pie
+                                    data={passFailData}
+                                    dataKey="value"
+                                    nameKey="name"
+                                    cx="50%"
+                                    cy="50%"
+                                    outerRadius={90}
+                                    label
+                                >
+                                    {passFailData.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={COLORS[index]} />
+                                    ))}
+                                </Pie>
+                                <Tooltip />
+                                <Legend />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    ) : (
+                        <div className="flex items-center justify-center h-full text-gray-400">
+                            No data available
+                        </div>
+                    )}
                 </ChartCard>
 
             </div>
 
             {/* SUBJECT */}
             <ChartCard title="Average Score Per Subject">
-                <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                        data={avgSubject}
-                        margin={{ top: 10, right: 20, left: 20, bottom: 50 }}
-                    >
-                        <XAxis
-                            dataKey="subject"
-                            angle={-20}
-                            textAnchor="end"
-                            interval={0}
-                            height={60}
-                        />
-                        <YAxis />
-                        <Tooltip />
-                        <Bar dataKey="averageScore" fill="#10b981" radius={[6, 6, 0, 0]} />
-                    </BarChart>
-                </ResponsiveContainer>
+                {avgSubject.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={avgSubject}>
+                            <XAxis dataKey="subject" />
+                            <YAxis />
+                            <Tooltip />
+                            <Bar dataKey="averageScore" fill="#10b981" />
+                        </BarChart>
+                    </ResponsiveContainer>
+                ) : (
+                    <div className="flex items-center justify-center h-full text-gray-400">
+                        No data available
+                    </div>
+                )}
             </ChartCard>
 
             {/* TEACHER */}
             <ChartCard title="Teacher Performance Overview">
-                <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                        data={filteredTeachers}
-                        margin={{ top: 10, right: 20, left: 20, bottom: 50 }}
-                    >
-                        <XAxis
-                            dataKey="teacherName"
-                            angle={-20}
-                            textAnchor="end"
-                            interval={0}
-                            height={60}
-                        />
-                        <YAxis />
-                        <Tooltip />
-                        <Bar dataKey="averageScore" fill="#f59e0b" radius={[6, 6, 0, 0]} />
-                    </BarChart>
-                </ResponsiveContainer>
+                {filteredTeachers.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={filteredTeachers}>
+                            <XAxis dataKey="teacherName" />
+                            <YAxis />
+                            <Tooltip />
+                            <Bar dataKey="averageScore" fill="#f59e0b" />
+                        </BarChart>
+                    </ResponsiveContainer>
+                ) : (
+                    <div className="flex items-center justify-center h-full text-gray-400">
+                        No data available
+                    </div>
+                )}
             </ChartCard>
 
         </div>
