@@ -38,6 +38,7 @@ export default function ExamManagement() {
       setExams(res.data);
     } catch (err) {
       console.error(err);
+      toast.error("Failed to load exams");
     } finally {
       setLoading(false);
     }
@@ -52,11 +53,11 @@ export default function ExamManagement() {
 
     try {
       if (editingExamId) {
-        await api.put(`/teacher/exams/${editingExamId}`, form);
+        await api.put(`/teacher/exam/${editingExamId}`, form);
         toast.success("Exam updated");
         setEditingExamId(null);
       } else {
-        await api.post("/teacher/exams", form);
+        await api.post("/teacher/exam", form);
         toast.success("Exam created");
       }
 
@@ -64,6 +65,7 @@ export default function ExamManagement() {
       fetchExams();
     } catch (err) {
       console.error(err);
+      toast.error("Failed to save exam");
     }
   };
 
