@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import toast from "react-toastify";
+import { toast } from "react-toastify";
 import api from "../../services/api";
 
 export default function TeacherSubjectAnalytics() {
