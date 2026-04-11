@@ -116,37 +116,37 @@ export default function TeacherProfile() {
 
     };
 
-    const handleSubmit = async () => {
+    const handleSubmit = async (e) => {
+        e.preventDefault();
 
         try {
+            const formData = new FormData();
 
-            setUpdating(true);
+            formData.append("fullName", profile.fullName);
 
-            showToast("info", "Updating profile...");
+            if (profile.phone && profile.phone.trim() !== "") {
+                formData.append("phone", profile.phone);
+            }
 
-            const payload = {
-                fullName: profile.fullName,
-                phone: profile.phone || null,
-                address: profile.address || null,
-                gender: profile.gender || null,
-                dateOfBirth:
-                    profile.dateOfBirth && profile.dateOfBirth !== ""
-                        ? profile.dateOfBirth
-                        : null
-            };
+            if (profile.address && profile.address.trim() !== "") {
+                formData.append("address", profile.address);
+            }
 
-            await api.put("/teacher/profile", payload);
+            if (profile.gender && profile.gender.trim() !== "") {
+                formData.append("gender", profile.gender);
+            }
+
+            if (profile.dateOfBirth && profile.dateOfBirth !== "") {
+                formData.append("dateOfBirth", profile.dateOfBirth);
+            }
+
+            await api.put("/teacher/profile", formData);
 
             showToast("success", "Profile updated successfully");
 
-        } catch {
-
+        } catch (err) {
+            console.error(err);
             showToast("error", "Failed to update profile");
-
-        } finally {
-
-            setUpdating(false);
-
         }
     };
 
