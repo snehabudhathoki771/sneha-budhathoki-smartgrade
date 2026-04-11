@@ -188,20 +188,19 @@ namespace SmartGrade.Controllers
             return Ok(feedback);
         }
 
-      
+
         // ================= PROFILE =================
 
         [HttpPut("profile")]
         [Consumes("multipart/form-data")]
         public async Task<IActionResult> UpdateProfile([FromForm] UpdateStudentProfileDto dto)
         {
-            // Get logged-in user ID
+            // ===== GET USER ID =====
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
             if (string.IsNullOrEmpty(userId) || !int.TryParse(userId, out int studentId))
                 return Unauthorized("Invalid token.");
 
-            // check which user is being updated
             Console.WriteLine("Updating DB user ID: " + studentId);
 
             var student = await _context.Users
@@ -210,7 +209,7 @@ namespace SmartGrade.Controllers
             if (student == null)
                 return NotFound("Student not found.");
 
-            // ================= UPDATE FIELDS =================
+            // ================= UPDATE TEXT FIELDS =================
 
             if (!string.IsNullOrWhiteSpace(dto.FullName))
                 student.FullName = dto.FullName;
@@ -228,7 +227,19 @@ namespace SmartGrade.Controllers
 
             if (dto.Photo != null && dto.Photo.Length > 0)
             {
-                var uploadFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
+                // Validate file type
+                if (!dto.Photo.ContentType.StartsWith("image/"))
+                    return BadRequest("Only image files are allowed.");
+
+                // Validate file size (2MB)
+                if (dto.Photo.Length > 2 * 1024 * 1024)
+                    return BadRequest("File size must be less than 2MB.");
+
+                var uploadFolder = Path.Combine(
+                    Directory.GetCurrentDirectory(),
+                    "wwwroot",
+                    "uploads"
+                );
 
                 if (!Directory.Exists(uploadFolder))
                     Directory.CreateDirectory(uploadFolder);
@@ -236,9 +247,25 @@ namespace SmartGrade.Controllers
                 var fileName = Guid.NewGuid() + Path.GetExtension(dto.Photo.FileName);
                 var filePath = Path.Combine(uploadFolder, fileName);
 
+                // Save new image
                 using (var stream = new FileStream(filePath, FileMode.Create))
                 {
                     await dto.Photo.CopyToAsync(stream);
+                }
+
+                // Delete old image
+                if (!string.IsNullOrEmpty(student.PhotoUrl))
+                {
+                    var oldPath = Path.Combine(
+                        Directory.GetCurrentDirectory(),
+                        "wwwroot",
+                        student.PhotoUrl.TrimStart('/')
+                    );
+
+                    if (System.IO.File.Exists(oldPath))
+                    {
+                        System.IO.File.Delete(oldPath);
+                    }
                 }
 
                 student.PhotoUrl = "/uploads/" + fileName;
@@ -255,7 +282,6 @@ namespace SmartGrade.Controllers
             try
             {
                 await _context.SaveChangesAsync();
-
                 Console.WriteLine("Changes saved to database successfully");
             }
             catch (Exception ex)
@@ -264,60 +290,13 @@ namespace SmartGrade.Controllers
                 return StatusCode(500, "An unexpected error occurred while updating the profile.");
             }
 
+            // ================= RESPONSE =================
+
             return Ok(new
             {
                 message = "Profile updated successfully",
                 photoUrl = student.PhotoUrl
             });
-        }
-
-
-
-        // ================= UPLOAD PROFILE PHOTO =================
-
-        [HttpPost("profile/photo")]
-        public async Task<IActionResult> UploadPhoto(IFormFile file)
-        {
-            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-            if (!int.TryParse(userId, out int studentId))
-                return Unauthorized();
-
-            var student = await _context.Users.FindAsync(studentId);
-
-            if (student == null)
-                return NotFound();
-
-            if (file == null || file.Length == 0)
-                return BadRequest("Invalid file.");
-
-            var folder = Path.Combine("wwwroot", "profile-images");
-
-            if (!Directory.Exists(folder))
-                Directory.CreateDirectory(folder);
-
-            var fileName = $"{Guid.NewGuid()}_{file.FileName}";
-            var path = Path.Combine(folder, fileName);
-
-            using (var stream = new FileStream(path, FileMode.Create))
-            {
-                await file.CopyToAsync(stream);
-            }
-
-            student.PhotoUrl = $"/profile-images/{fileName}";
-            
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error updating student profile");
-                return StatusCode(500, "Internal server error: " + ex.Message);
-            }
-
-
-            return Ok(new { photoUrl = student.PhotoUrl });
         }
     }
 }

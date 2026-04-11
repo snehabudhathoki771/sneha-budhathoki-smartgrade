@@ -1206,7 +1206,8 @@ namespace SmartGrade.Controllers
                     u.Phone,
                     u.Address,
                     u.DateOfBirth,
-                    u.Gender
+                    u.Gender,
+                    u.PhotoUrl
                 })
                 .FirstOrDefaultAsync();
 
@@ -1246,43 +1247,74 @@ namespace SmartGrade.Controllers
 
 
         [HttpPost("profile/photo")]
+        [Consumes("multipart/form-data")]
         public async Task<IActionResult> UploadTeacherPhoto(IFormFile photo)
         {
+            // ===== VALIDATE FILE =====
             if (photo == null || photo.Length == 0)
                 return BadRequest("No file uploaded.");
 
-            var teacherId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            if (!photo.ContentType.StartsWith("image/"))
+                return BadRequest("Only image files are allowed.");
 
-            var teacher = await _context.Users
-                .FirstOrDefaultAsync(u => u.Id == teacherId);
+            if (photo.Length > 2 * 1024 * 1024)
+                return BadRequest("File size must be less than 2MB.");
 
-            if (teacher == null)
-                return NotFound("Teacher not found.");
-
-            using (var memoryStream = new MemoryStream())
-            {
-                await photo.CopyToAsync(memoryStream);
-
-                teacher.PhotoData = memoryStream.ToArray();
-                teacher.PhotoType = photo.ContentType;
-            }
-
-            await _context.SaveChangesAsync();
-
-            return Ok(new { message = "Photo uploaded successfully" });
-        }
-
-        [HttpGet("profile/photo")]
-        public async Task<IActionResult> GetTeacherPhoto()
-        {
+            // ===== GET TEACHER =====
             var teacherId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
             var teacher = await _context.Users.FindAsync(teacherId);
 
-            if (teacher == null || teacher.PhotoData == null)
-                return NotFound("No photo found");
+            if (teacher == null)
+                return NotFound("Teacher not found.");
 
-            return File(teacher.PhotoData, teacher.PhotoType ?? "image/png");
+            // ===== CREATE UPLOAD FOLDER =====
+            var uploadFolder = Path.Combine(
+                Directory.GetCurrentDirectory(),
+                "wwwroot",
+                "uploads"
+            );
+
+            if (!Directory.Exists(uploadFolder))
+                Directory.CreateDirectory(uploadFolder);
+
+            // ===== GENERATE FILE NAME =====
+            var fileName = Guid.NewGuid() + Path.GetExtension(photo.FileName);
+            var filePath = Path.Combine(uploadFolder, fileName);
+
+            // ===== SAVE NEW FILE =====
+            using (var stream = new FileStream(filePath, FileMode.Create))
+            {
+                await photo.CopyToAsync(stream);
+            }
+
+            // ===== DELETE OLD IMAGE =====
+            if (!string.IsNullOrEmpty(teacher.PhotoUrl))
+            {
+                var oldPath = Path.Combine(
+                    Directory.GetCurrentDirectory(),
+                    "wwwroot",
+                    teacher.PhotoUrl.TrimStart('/')
+                );
+
+                if (System.IO.File.Exists(oldPath))
+                {
+                    System.IO.File.Delete(oldPath);
+                }
+            }
+
+            // ===== SAVE NEW URL =====
+            teacher.PhotoUrl = "/uploads/" + fileName;
+
+            // ===== SAVE TO DATABASE =====
+            await _context.SaveChangesAsync();
+
+            // ===== RESPONSE =====
+            return Ok(new
+            {
+                message = "Photo uploaded successfully",
+                photoUrl = teacher.PhotoUrl
+            });
         }
 
 

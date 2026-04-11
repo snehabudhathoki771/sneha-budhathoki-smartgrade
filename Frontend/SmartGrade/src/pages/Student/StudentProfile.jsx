@@ -35,6 +35,7 @@ export default function StudentProfile() {
   const [photo, setPhoto] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const BASE = import.meta.env.VITE_API_URL || "";
 
   useEffect(() => {
     fetchProfile();
@@ -85,20 +86,19 @@ export default function StudentProfile() {
 
       const formData = new FormData();
 
-      formData.append("FullName", profile.fullName);
-      formData.append("Phone", profile.phone);
-      formData.append("Address", profile.address);
-      formData.append("Gender", profile.gender);
-      formData.append("GuardianName", profile.guardianName);
-      formData.append("GuardianPhone", profile.guardianPhone);
+      formData.append("fullName", profile.fullName);
+      formData.append("phone", profile.phone);
+      formData.append("address", profile.address);
+      formData.append("gender", profile.gender);
+      formData.append("guardianName", profile.guardianName);
+      formData.append("guardianPhone", profile.guardianPhone);
 
       if (profile.dateOfBirth) {
-        const isoDate = new Date(profile.dateOfBirth).toISOString();
-        formData.append("DateOfBirth", isoDate);
+        formData.append("dateOfBirth", profile.dateOfBirth);
       }
 
       if (photo) {
-        formData.append("Photo", photo);
+        formData.append("photo", photo);
       }
 
       await api.put("/student/profile", formData, {
@@ -157,11 +157,7 @@ export default function StudentProfile() {
             <div className="relative w-24 h-24">
               {profile.photoUrl || photo ? (
                 <img
-                  src={
-                    photo
-                      ? URL.createObjectURL(photo)
-                      : `${import.meta.env.VITE_API_URL}${profile.photoUrl}`
-                  }
+                  src={photo ? URL.createObjectURL(photo) : `${BASE}${profile.photoUrl}`}
                   alt="profile"
                   className="w-24 h-24 rounded-full object-cover border border-slate-200"
                 />
@@ -175,6 +171,7 @@ export default function StudentProfile() {
                 <FaCamera className="text-white text-sm" />
                 <input
                   type="file"
+                  accept="image/*"
                   onChange={handlePhotoChange}
                   className="hidden"
                 />

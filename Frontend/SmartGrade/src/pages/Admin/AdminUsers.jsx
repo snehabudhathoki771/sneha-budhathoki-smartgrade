@@ -476,9 +476,9 @@ export default function AdminUsers() {
 
                                         {currentUsers.map((user) => {
 
-                                            const initials = user.fullName
+                                            const initials = (user.fullName || "U")
                                                 .split(" ")
-                                                .map(n => n[0])
+                                                .map(n => n?.[0] || "")
                                                 .join("")
                                                 .toUpperCase();
 
@@ -491,9 +491,10 @@ export default function AdminUsers() {
                                                         <div className="flex items-center gap-3">
 
                                                             <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center">
-                                                                {user.role === "Teacher" ? (
+
+                                                                {user.photoUrl ? (
                                                                     <img
-                                                                        src={`${import.meta.env.VITE_API_URL}/api/admin/teachers/${user.id}/photo`}
+                                                                        src={`${import.meta.env.VITE_API_URL}${user.photoUrl}`}
                                                                         alt={user.fullName}
                                                                         className="w-full h-full object-cover"
                                                                         onError={(e) => {
@@ -501,19 +502,18 @@ export default function AdminUsers() {
                                                                             e.target.src = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
                                                                         }}
                                                                     />
-                                                                ) : user.photoUrl ? (
-                                                                    <img
-                                                                        src={`${import.meta.env.VITE_API_URL.replace('/api', '')}/${user.photoUrl}`}
-                                                                        alt={user.fullName}
-                                                                        className="w-full h-full object-cover"
-                                                                    />
                                                                 ) : (
                                                                     <div
-                                                                        className={`w-full h-full ${avatarColor(user.fullName)} text-white flex items-center justify-center text-sm font-semibold`}
+                                                                        className={`w-full h-full ${avatarColor(user.fullName || "U")} text-white flex items-center justify-center text-sm font-semibold`}
                                                                     >
-                                                                        {initials}
+                                                                        {(user.fullName || "U")
+                                                                            .split(" ")
+                                                                            .map(n => n?.[0] || "")
+                                                                            .join("")
+                                                                            .toUpperCase()}
                                                                     </div>
                                                                 )}
+
                                                             </div>
 
                                                             <div>

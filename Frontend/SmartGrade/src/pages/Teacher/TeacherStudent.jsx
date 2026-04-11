@@ -5,9 +5,9 @@ import { toast } from "react-toastify";
 import api from "../../services/api";
 
 export default function TeacherStudents() {
-    
+
     const navigate = useNavigate();
-    
+
     useEffect(() => {
         const token = localStorage.getItem("token");
 
@@ -18,8 +18,7 @@ export default function TeacherStudents() {
 
     const [students, setStudents] = useState([]);
     const [search, setSearch] = useState("");
-
-    
+    const BASE = import.meta.env.VITE_API_URL || "";
 
     useEffect(() => {
         fetchStudents();
@@ -38,8 +37,8 @@ export default function TeacherStudents() {
     };
 
     const filteredStudents = students.filter((s) =>
-        s.fullName.toLowerCase().includes(search.toLowerCase()) ||
-        s.email.toLowerCase().includes(search.toLowerCase())
+        (s.fullName || "").toLowerCase().includes(search.toLowerCase()) ||
+        (s.email || "").toLowerCase().includes(search.toLowerCase())
     );
 
     return (
@@ -132,7 +131,7 @@ export default function TeacherStudents() {
                                         .toUpperCase();
 
                                     const imageUrl = s.photoUrl
-                                        ? encodeURI(`${import.meta.env.VITE_API_URL}${s.photoUrl}`)
+                                        ? encodeURI(`${BASE}${s.photoUrl}`)
                                         : null;
 
                                     return (

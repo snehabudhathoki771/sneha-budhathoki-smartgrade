@@ -9,6 +9,7 @@ export default function TeacherStudentProfile() {
   const navigate = useNavigate();
   const { id } = useParams();
   const [data, setData] = useState(null);
+  const BASE = import.meta.env.VITE_API_URL || "";
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -37,15 +38,24 @@ export default function TeacherStudentProfile() {
     return <div className="px-6 pt-3 text-sm text-gray-500">Loading...</div>;
   }
 
-  const { student, subjects, strongSubjects, weakSubjects, average, consistency } = data;
+  const {
+    student = {},
+    subjects = [],
+    strongSubjects = [],
+    weakSubjects = [],
+    average = 0,
+    consistency = "N/A"
+  } = data || {};
 
   const imageUrl = student.photoUrl
-    ? encodeURI(`${import.meta.env.VITE_API_URL}${student.photoUrl}`)
+    ? encodeURI(`${BASE}${student.photoUrl}`)
     : null;
 
-  const initials = student.fullName
-    ? student.fullName.split(" ").map(n => n[0]).join("").toUpperCase()
-    : "U";
+  const initials = (student.fullName || "U")
+    .split(" ")
+    .map(n => n[0])
+    .join("")
+    .toUpperCase();
 
   const getStatus = () => {
     if (!average) return "Average";

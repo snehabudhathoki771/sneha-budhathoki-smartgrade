@@ -20,7 +20,7 @@ export default function AdminUserProfile() {
 
     const [user, setUser] = useState(null);
 
-    const BASE_URL = import.meta.env.VITE_API_URL;
+    const BASE_URL = import.meta.env.VITE_API_URL || "";
 
     useEffect(() => {
         fetchUser();
@@ -54,13 +54,11 @@ export default function AdminUserProfile() {
         ? encodeURI(`${BASE_URL}${user.photoUrl}`)
         : null;
 
-    const initials = user.fullName
-        ? user.fullName
-            .split(" ")
-            .map(n => n[0])
-            .join("")
-            .toUpperCase()
-        : "U";
+    const initials = (user.fullName || "U")
+        .split(" ")
+        .map(n => n?.[0] || "")
+        .join("")
+        .toUpperCase();
 
     return (
 
@@ -99,6 +97,7 @@ export default function AdminUserProfile() {
                                 alt="user"
                                 className="w-20 h-20 rounded-full object-cover border"
                                 onError={(e) => {
+                                    e.target.onerror = null;
                                     e.target.src = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
                                 }}
                             />

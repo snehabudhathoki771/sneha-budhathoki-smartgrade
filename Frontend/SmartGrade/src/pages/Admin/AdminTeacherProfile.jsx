@@ -21,7 +21,7 @@ export default function AdminTeacherProfile() {
     const [teacher, setTeacher] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    const BASE_URL = import.meta.env.VITE_API_URL;
+    const BASE_URL = import.meta.env.VITE_API_URL || "";
 
     const fetchTeacher = async () => {
 
@@ -82,6 +82,10 @@ export default function AdminTeacherProfile() {
             </div>
         );
     }
+    
+    const imageUrl = teacher.photoUrl
+        ? `${BASE_URL}${teacher.photoUrl}`
+        : null;
 
     return (
 
@@ -110,15 +114,21 @@ export default function AdminTeacherProfile() {
                 {/* TOP */}
                 <div className="flex items-center gap-6 p-6 border-b border-gray-100">
 
-                    <img
-                        src={`${BASE_URL}/api/admin/teachers/${id}/photo?${Date.now()}`}
-                        alt="Teacher"
-                        className="w-20 h-20 rounded-full object-cover border"
-                        onError={(e) => {
-                            e.target.onerror = null;
-                            e.target.src = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
-                        }}
-                    />
+                    {imageUrl ? (
+                        <img
+                            src={imageUrl}
+                            alt="Teacher"
+                            className="w-20 h-20 rounded-full object-cover border"
+                            onError={(e) => {
+                                e.target.onerror = null;
+                                e.target.src = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+                            }}
+                        />
+                    ) : (
+                        <div className="w-20 h-20 rounded-full bg-gray-200 flex items-center justify-center text-gray-500">
+                            ?
+                        </div>
+                    )}
 
                     <div>
 

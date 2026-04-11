@@ -891,7 +891,8 @@ namespace SmartGrade.Controllers
                     u.Phone,
                     u.Address,
                     u.DateOfBirth,
-                    u.Gender                   
+                    u.Gender,
+                    u.PhotoUrl
                 })
                 .FirstOrDefaultAsync();
 
@@ -899,18 +900,6 @@ namespace SmartGrade.Controllers
                 return NotFound("Teacher not found");
 
             return Ok(teacher);
-        }
-
-        [HttpGet("teachers/{id}/photo")]
-        public async Task<IActionResult> GetTeacherPhotoByAdmin(int id)
-        {
-            var teacher = await _context.Users
-                .FirstOrDefaultAsync(u => u.Id == id && u.Role == "Teacher");
-
-            if (teacher == null || teacher.PhotoData == null)
-                return NotFound();
-
-            return File(teacher.PhotoData, teacher.PhotoType ?? "image/png");
         }
 
 

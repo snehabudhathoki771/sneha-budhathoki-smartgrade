@@ -100,7 +100,7 @@ export default function TeacherProfile() {
                     }
                 }
             );
-
+            await fetchProfile();
             setImageKey(Date.now());
             showToast("success", "Photo uploaded successfully");
 
@@ -206,7 +206,7 @@ export default function TeacherProfile() {
                     <label className="cursor-pointer relative group">
 
                         <img
-                            src={`${import.meta.env.VITE_API_URL}/api/teacher/profile/photo?${imageKey}`}
+                            src={`${import.meta.env.VITE_API_URL}${profile.photoUrl}?${imageKey}`}
                             alt="profile"
                             className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg"
                             onError={(e) => {
@@ -225,7 +225,7 @@ export default function TeacherProfile() {
 
                         <input
                             type="file"
-                            accept="image/png, image/jpeg"
+                            accept="image/*"
                             onChange={handlePhotoChange}
                             className="hidden"
                         />
