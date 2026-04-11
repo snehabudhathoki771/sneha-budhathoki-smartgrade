@@ -5,7 +5,9 @@ import { ArrowLeft } from "lucide-react";
 import { toast } from "react-toastify";
 
 export default function AdminTeacherProfile() {
-
+    
+    const navigate = useNavigate();
+    
     useEffect(() => {
         const token = localStorage.getItem("token");
 
@@ -15,7 +17,6 @@ export default function AdminTeacherProfile() {
     }, [navigate]);
 
     const { id } = useParams();
-    const navigate = useNavigate();
 
     const [teacher, setTeacher] = useState(null);
     const [loading, setLoading] = useState(true);

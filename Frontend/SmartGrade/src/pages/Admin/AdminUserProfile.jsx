@@ -6,6 +6,8 @@ import { toast } from "react-toastify";
 
 export default function AdminUserProfile() {
 
+    const navigate = useNavigate();
+
     useEffect(() => {
         const token = localStorage.getItem("token");
 
@@ -15,8 +17,6 @@ export default function AdminUserProfile() {
     }, [navigate]);
 
     const { id } = useParams();
-
-    const navigate = useNavigate();
 
     const [user, setUser] = useState(null);
 

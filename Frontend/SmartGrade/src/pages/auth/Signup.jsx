@@ -11,6 +11,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import logo from "../../assets/SGlogo.png";
 import { signup } from "../../services/authService";
+import React, { useEffect } from 'react';
 
 const ROLE_META = {
   Student: { icon: <FaUserGraduate />, bg: "bg-sky-500" },

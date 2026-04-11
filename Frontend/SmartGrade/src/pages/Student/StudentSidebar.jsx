@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import logo from "../../assets/SGlogo.png";
+import React, { useEffect } from 'react';
 
 function StudentSidebar() {
 
