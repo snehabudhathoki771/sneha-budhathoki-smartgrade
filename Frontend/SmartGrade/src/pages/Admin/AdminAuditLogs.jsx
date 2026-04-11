@@ -1,14 +1,25 @@
-import { useEffect, useState } from "react";
-import api from "../../services/api";
 import { Search } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import api from "../../services/api";
 
 export default function AdminAuditLogs() {
+
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        const token = localStorage.getItem("token");
+
+        if (!token) {
+            navigate("/login");
+        }
+    }, [navigate]);
+
     const [logs, setLogs] = useState([]);
     const [search, setSearch] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
     const logsPerPage = 10;
 
-    const token = localStorage.getItem("token");
 
     useEffect(() => {
         fetchLogs();
@@ -21,13 +32,14 @@ export default function AdminAuditLogs() {
             setLogs(res.data);
         } catch (err) {
             console.error(err);
+            toast.error("Failed to fetch audit logs.");
         }
     };
 
     const filteredLogs = logs.filter(
         (log) =>
-            log.action.toLowerCase().includes(search.toLowerCase()) ||
-            log.performedBy.toLowerCase().includes(search.toLowerCase())
+            (log.action || "").toLowerCase().includes(search.toLowerCase()) ||
+            (log.performedBy || "").toLowerCase().includes(search.toLowerCase())
     );
 
     useEffect(() => {
@@ -161,11 +173,10 @@ export default function AdminAuditLogs() {
                             <button
                                 key={index}
                                 onClick={() => changePage(index + 1)}
-                                className={`px-4 py-2 rounded-xl ${
-                                    currentPage === index + 1
-                                        ? "bg-emerald-500 text-white"
-                                        : "bg-gray-200 hover:bg-gray-300"
-                                }`}
+                                className={`px-4 py-2 rounded-xl ${currentPage === index + 1
+                                    ? "bg-emerald-500 text-white"
+                                    : "bg-gray-200 hover:bg-gray-300"
+                                    }`}
                             >
                                 {index + 1}
                             </button>

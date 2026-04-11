@@ -8,6 +8,8 @@ import {
   Users
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 
 import {
   Bar,
@@ -24,29 +26,36 @@ import {
 } from "recharts";
 
 export default function AdminDashboard() {
+
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      navigate("/login");
+    }
+  }, [navigate]);
+
   const [data, setData] = useState(null);
   const [passFail, setPassFail] = useState(null);
   const [subjectAvg, setSubjectAvg] = useState([]);
 
-  const token = localStorage.getItem("token");
 
   useEffect(() => {
     const fetchDashboard = async () => {
       try {
         const overview = await api.get("/admin/dashboard-overview");
 
-        const passFailRes = await api.get("/admin/analytics/pass-fail", {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const passFailRes = await api.get("/admin/analytics/pass-fail");
 
-        const subjectAvgRes = await api.get("/admin/analytics/average-score-subject", {
-          headers: { Authorization: `Bearer ${token}` }         }
-        );
+        const subjectAvgRes = await api.get("/admin/analytics/average-score-subject");
 
         setData(overview.data);
         setPassFail(passFailRes.data);
         setSubjectAvg(subjectAvgRes.data);
       } catch (err) {
+        toast.error("Failed to fetch dashboard data.");
         console.error("Dashboard error:", err);
       }
     };
@@ -63,8 +72,8 @@ export default function AdminDashboard() {
   }
 
   const pieData = [
-    { name: "Passed", value: passFail.passed },
-    { name: "Failed", value: passFail.failed }
+    { name: "Passed", value: passFail?.passed || 0 },
+    { name: "Failed", value: passFail?.failed || 0 }
   ];
 
   const COLORS = ["#22c55e", "#ef4444"];
@@ -73,7 +82,7 @@ export default function AdminDashboard() {
 
   const grouped = (data.charts?.subjectFailureRanking || []).reduce((acc, item) => {
 
-    const examName = item.exam || "Unknown Exam"; // ✅ FIX
+    const examName = item.exam || "Unknown Exam";
 
     if (!acc[examName]) {
       acc[examName] = [];

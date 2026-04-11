@@ -1,12 +1,20 @@
-import api from "../../services/api";
 import { BookUser, Eye, GraduationCap, KeyRound, Pencil, Search, Shield, UserPlus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import api from "../../services/api";
 
 export default function AdminUsers() {
 
     const navigate = useNavigate();
+
+    useEffect(() => {
+        const token = localStorage.getItem("token");
+
+        if (!token) {
+            navigate("/login");
+        }
+    }, [navigate]);
 
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -80,9 +88,9 @@ export default function AdminUsers() {
         return users.filter((user) => {
 
             const matchesSearch =
-                user.fullName.toLowerCase().includes(search.toLowerCase()) ||
-                user.email.toLowerCase().includes(search.toLowerCase()) ||
-                user.role.toLowerCase().includes(search.toLowerCase());
+                (user.fullName || "").toLowerCase().includes(search.toLowerCase()) ||
+                (user.email || "").toLowerCase().includes(search.toLowerCase()) ||
+                (user.role || "").toLowerCase().includes(search.toLowerCase())
 
             const matchesRole =
                 roleFilter === "All" || user.role === roleFilter;
@@ -104,7 +112,9 @@ export default function AdminUsers() {
     const [deactivateDays, setDeactivateDays] = useState(null);
 
     const changePage = (page) => {
-        setCurrentPage(page);
+        if (page >= 1 && page <= totalPages) {
+            setCurrentPage(page);
+        }
     };
 
     const handleCreate = async (e) => {
@@ -266,6 +276,7 @@ export default function AdminUsers() {
                 </div>
             </div>
         );
+    };
 
     const roleIcon = (role) => {
         if (role === "Admin") return <Shield size={14} className="mr-1" />;
@@ -877,5 +888,4 @@ export default function AdminUsers() {
         </div>
 
     );
-}
 }

@@ -12,8 +12,20 @@ import {
 } from "react-icons/fa";
 import { toast } from "react-toastify";
 import { getStudentResults, downloadExamReport } from "../../services/api";
+import { useNavigate } from "react-router-dom";
 
 export default function StudentResultsAndReports() {
+
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        const token = localStorage.getItem("token");
+
+        if (!token) {
+            navigate("/login");
+        }
+    }, [navigate]);
+
     const [results, setResults] = useState([]);
     const [openExam, setOpenExam] = useState(null);
     const [activeTab, setActiveTab] = useState("results");
@@ -84,7 +96,9 @@ export default function StudentResultsAndReports() {
             link.click();
             document.body.removeChild(link);
 
-            toast.update(toastId, {
+            window.URL.revokeObjectURL(url);
+
+            toast.update({
                 render: "Report downloaded successfully",
                 type: "success",
                 autoClose: 3000
@@ -111,12 +125,12 @@ export default function StudentResultsAndReports() {
 
     const calculateSubjectTotal = (sections) => {
         const totalObtained = sections.reduce(
-            (sum, sec) => sum + sec.marksObtained,
+            (sum, sec) => sum + (sec.marksObtained || 0),
             0
         );
 
         const totalMax = sections.reduce(
-            (sum, sec) => sum + sec.maxMarks,
+            (sum, sec) => sum + (sec.maxMarks || 0),
             0
         );
 
@@ -232,8 +246,8 @@ export default function StudentResultsAndReports() {
                 <button
                     onClick={() => setActiveTab("results")}
                     className={`px-5 py-2 rounded-lg text-sm font-medium transition ${activeTab === "results"
-                            ? "bg-white shadow text-emerald-600"
-                            : "text-slate-500 hover:text-slate-700"
+                        ? "bg-white shadow text-emerald-600"
+                        : "text-slate-500 hover:text-slate-700"
                         }`}
                 >
                     Detailed Results
@@ -242,8 +256,8 @@ export default function StudentResultsAndReports() {
                 <button
                     onClick={() => setActiveTab("reports")}
                     className={`px-5 py-2 rounded-lg text-sm font-medium transition ${activeTab === "reports"
-                            ? "bg-white shadow text-emerald-600"
-                            : "text-slate-500 hover:text-slate-700"
+                        ? "bg-white shadow text-emerald-600"
+                        : "text-slate-500 hover:text-slate-700"
                         }`}
                 >
                     Report Cards
@@ -289,8 +303,8 @@ export default function StudentResultsAndReports() {
                                 <div className="flex items-center gap-3">
                                     <span
                                         className={`px-3 py-1 text-xs rounded-full font-medium ${examTotal.percentage >= 40
-                                                ? "bg-emerald-100 text-emerald-600"
-                                                : "bg-red-100 text-red-600"
+                                            ? "bg-emerald-100 text-emerald-600"
+                                            : "bg-red-100 text-red-600"
                                             }`}
                                     >
                                         {examTotal.percentage >= 40 ? "Pass" : "Fail"}

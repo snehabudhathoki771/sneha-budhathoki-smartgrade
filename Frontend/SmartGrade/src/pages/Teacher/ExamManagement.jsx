@@ -1,4 +1,3 @@
-import axios from "axios";
 import {
   FileBarChart2,
   Pencil,
@@ -6,8 +5,19 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
+import api from "../../services/api";
 
 export default function ExamManagement() {
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      navigate("/login");
+    }
+  }, [navigate]);
+
   const [exams, setExams] = useState([]);
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
@@ -17,18 +27,14 @@ export default function ExamManagement() {
   const [editingExamId, setEditingExamId] = useState(null);
   const [confirmModal, setConfirmModal] = useState(null);
 
-  const token = localStorage.getItem("token");
   const navigate = useNavigate();
 
   const fetchExams = async () => {
     try {
       setLoading(true);
-      const res = await axios.get(
-        `${import.meta.env.VITE_API_URL}/teacher/exams`,
-        {
-          headers: { Authorization: `Bearer ${token}` }
-        }
-      );
+
+      const res = await api.get("/teacher/exams");
+
       setExams(res.data);
     } catch (err) {
       console.error(err);
@@ -46,18 +52,12 @@ export default function ExamManagement() {
 
     try {
       if (editingExamId) {
-        await axios.put(
-          `${import.meta.env.VITE_API_URL}/teacher/exams/${editingExamId}`,
-          form,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+        await api.put(`/teacher/exams/${editingExamId}`, form);
+        toast.success("Exam updated");
         setEditingExamId(null);
       } else {
-        await axios.post(
-          `${import.meta.env.VITE_API_URL}/teacher/exam`,
-          form,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+        await api.post("/teacher/exam", form);
+        toast.success("Exam created");
       }
 
       setForm({ name: "", academicYear: "" });
@@ -187,11 +187,10 @@ export default function ExamManagement() {
                   </div>
 
                   <span
-                    className={`px-3 py-1 text-xs font-medium rounded-full ${
-                      exam.status === "Published"
-                        ? "bg-green-100 text-green-700"
-                        : "bg-gray-100 text-gray-600"
-                    }`}
+                    className={`px-3 py-1 text-xs font-medium rounded-full ${exam.status === "Published"
+                      ? "bg-green-100 text-green-700"
+                      : "bg-gray-100 text-gray-600"
+                      }`}
                   >
                     {exam.status}
                   </span>
@@ -206,11 +205,10 @@ export default function ExamManagement() {
                       exam.status !== "Published" &&
                       navigate(`/teacher/exams/${exam.id}/subjects`)
                     }
-                    className={`w-full py-2.5 rounded-xl text-sm transition ${
-                      exam.status === "Published"
-                        ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                        : "bg-green-600 text-white hover:bg-green-700"
-                    }`}
+                    className={`w-full py-2.5 rounded-xl text-sm transition ${exam.status === "Published"
+                      ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                      : "bg-green-600 text-white hover:bg-green-700"
+                      }`}
                   >
                     Manage Subjects
                   </button>
@@ -248,11 +246,10 @@ export default function ExamManagement() {
                       onClick={() =>
                         exam.status !== "Published" && handleEdit(exam)
                       }
-                      className={`flex-1 py-2.5 rounded-xl transition flex items-center justify-center gap-2 text-sm ${
-                        exam.status === "Published"
-                          ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                          : "border border-gray-300 text-gray-700 hover:bg-gray-100"
-                      }`}
+                      className={`flex-1 py-2.5 rounded-xl transition flex items-center justify-center gap-2 text-sm ${exam.status === "Published"
+                        ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                        : "border border-gray-300 text-gray-700 hover:bg-gray-100"
+                        }`}
                     >
                       <Pencil size={16} />
                       Edit
@@ -263,11 +260,10 @@ export default function ExamManagement() {
                       onClick={() =>
                         exam.status !== "Published" && handleDelete(exam.id)
                       }
-                      className={`flex-1 py-2.5 rounded-xl transition flex items-center justify-center gap-2 text-sm ${
-                        exam.status === "Published"
-                          ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                          : "border border-red-300 text-red-600 hover:bg-red-50"
-                      }`}
+                      className={`flex-1 py-2.5 rounded-xl transition flex items-center justify-center gap-2 text-sm ${exam.status === "Published"
+                        ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                        : "border border-red-300 text-red-600 hover:bg-red-50"
+                        }`}
                     >
                       <Trash2 size={16} />
                       Delete
@@ -312,41 +308,34 @@ export default function ExamManagement() {
                 onClick={async () => {
                   try {
                     if (confirmModal.type === "delete") {
-                      await axios.delete(
-                        `${import.meta.env.VITE_API_URL}/teacher/exams/${confirmModal.id}`,
-                        { headers: { Authorization: `Bearer ${token}` } }
-                      );
+                      await api.delete(`/teacher/exams/${confirmModal.id}`);
+                      toast.success("Exam deleted");
                     }
 
                     if (confirmModal.type === "publish") {
-                      await axios.put(
-                        `${import.meta.env.VITE_API_URL}/teacher/exams/${confirmModal.id}/publish`,
-                        {},
-                        { headers: { Authorization: `Bearer ${token}` } }
-                      );
+                      await api.put(`/teacher/exams/${confirmModal.id}/publish`);
+                      toast.success("Exam published");
                     }
 
                     if (confirmModal.type === "unpublish") {
-                      await axios.put(
-                        `${import.meta.env.VITE_API_URL}/teacher/exams/${confirmModal.id}/unpublish`,
-                        {},
-                        { headers: { Authorization: `Bearer ${token}` } }
-                      );
+                      await api.put(`/teacher/exams/${confirmModal.id}/unpublish`);
+                      toast.success("Exam unpublished");
                     }
 
                     fetchExams();
                     setConfirmModal(null);
                   } catch (err) {
                     console.error(err);
+                    toast.error("Failed to load exams");
                   }
                 }}
-                className={`px-5 py-2 rounded-xl text-white transition ${
-                  confirmModal.type === "delete"
-                    ? "bg-red-500 hover:bg-red-600"
-                    : confirmModal.type === "publish"
+                
+                className={`px-5 py-2 rounded-xl text-white transition ${confirmModal.type === "delete"
+                  ? "bg-red-500 hover:bg-red-600"
+                  : confirmModal.type === "publish"
                     ? "bg-green-600 hover:bg-green-700"
                     : "bg-orange-500 hover:bg-orange-600"
-                }`}
+                  }`}
               >
                 Confirm
               </button>

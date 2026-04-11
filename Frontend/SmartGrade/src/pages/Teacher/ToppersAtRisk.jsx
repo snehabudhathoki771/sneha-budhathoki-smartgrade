@@ -1,5 +1,7 @@
-import axios from "axios";
+import api from "../../services/api";
 import { useEffect, useMemo, useState } from "react";
+import { toast } from "react-toastify";
+import { useNavigate } from "react-router-dom";
 import {
   Bar,
   BarChart,
@@ -22,11 +24,16 @@ import {
 } from "lucide-react";
 
 export default function ToppersAtRisk() {
-  const token = localStorage.getItem("token");
 
-  const headers = {
-    Authorization: `Bearer ${token}`,
-  };
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      navigate("/login");
+    }
+  }, [navigate]);
 
   const [exams, setExams] = useState([]);
   const [selectedExam, setSelectedExam] = useState("");
@@ -36,10 +43,9 @@ export default function ToppersAtRisk() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    axios
-      .get("https://localhost:7247/api/teacher/exams", { headers })
+    api.get("/teacher/exams")
       .then((res) => setExams(res.data))
-      .catch((err) => console.error(err));
+      .catch(() => toast.error("Failed to load exams"));
   }, []);
 
   useEffect(() => {
@@ -53,26 +59,17 @@ export default function ToppersAtRisk() {
     setLoading(true);
 
     Promise.all([
-      axios.get(
-        `https://localhost:7247/api/teacher/exams/${selectedExam}/toppers`,
-        { headers }
-      ),
-      axios.get(
-        `https://localhost:7247/api/teacher/exams/${selectedExam}/at-risk`,
-        { headers }
-      ),
-      axios.get(
-        `https://localhost:7247/api/teacher/exams/${selectedExam}/results`,
-        { headers }
-      ),
+      api.get(`/teacher/exams/${selectedExam}/toppers`),
+      api.get(`/teacher/exams/${selectedExam}/at-risk`),
+      api.get(`/teacher/exams/${selectedExam}/results`)
     ])
       .then(([toppersRes, atRiskRes, resultsRes]) => {
         setToppers(toppersRes.data);
         setAtRisk(atRiskRes.data);
         setResults(resultsRes.data);
       })
-      .catch((err) => {
-        console.error(err);
+      .catch(() => {
+        toast.error("Failed to load analysis");
         setToppers([]);
         setAtRisk([]);
         setResults([]);
@@ -158,7 +155,7 @@ export default function ToppersAtRisk() {
 
         {/* HEADER */}
         <div>
-          
+
         </div>
 
         {/* SELECT */}

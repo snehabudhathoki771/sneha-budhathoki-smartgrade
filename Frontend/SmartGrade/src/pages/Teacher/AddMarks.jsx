@@ -1,16 +1,19 @@
 import { BarChart3 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 import api from "../../services/api";
 
 export default function AddMarks() {
 
   const navigate = useNavigate();
-  const token = localStorage.getItem("token");
-
   useEffect(() => {
-    if (!token) navigate("/login");
-  }, [token, navigate]);
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      navigate("/login");
+    }
+  }, [navigate]);
 
   const [exams, setExams] = useState([]);
   const [subjects, setSubjects] = useState([]);
@@ -39,6 +42,7 @@ export default function AddMarks() {
         navigate("/login");
       } else {
         setErrorMessage("Failed to load data.");
+        toast.error("Failed to load data");
       }
     }
   };
@@ -65,7 +69,7 @@ export default function AddMarks() {
 
   useEffect(() => {
     safeGet("/teacher/exams", setExams);
-  }, []);
+  }, [navigate]);
 
   useEffect(() => {
 
@@ -242,8 +246,10 @@ export default function AddMarks() {
 
       if (err.response?.data) {
         setErrorMessage(err.response.data);
+        toast.error(err.response.data);
       } else {
         setErrorMessage("Error saving marks.");
+        toast.error("Error saving marks");
       }
 
     }

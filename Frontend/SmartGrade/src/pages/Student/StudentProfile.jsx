@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
+import api from "../../services/api";
 import { toast } from "react-toastify";
+import { useNavigate } from "react-router-dom";
 import {
   FaCamera,
   FaUserCircle,
@@ -21,18 +22,19 @@ export default function StudentProfile() {
     photoUrl: ""
   });
 
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      navigate("/login");
+    }
+  }, [navigate]);
+
   const [photo, setPhoto] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-
-  const API = "https://localhost:7247/api/student";
-  const BASE_URL = "https://localhost:7247";
-
-  const token = localStorage.getItem("token");
-
-  const headers = {
-    Authorization: `Bearer ${token}`
-  };
 
   useEffect(() => {
     fetchProfile();
@@ -40,7 +42,7 @@ export default function StudentProfile() {
 
   const fetchProfile = async () => {
     try {
-      const res = await axios.get(`${API}/profile`, { headers });
+      const res = await api.get("/student/profile");
 
       setProfile({
         fullName: res.data.fullName || "",
@@ -99,8 +101,10 @@ export default function StudentProfile() {
         formData.append("Photo", photo);
       }
 
-      await axios.put(`${API}/profile`, formData, {
-        headers: { Authorization: `Bearer ${token}` }
+      await api.put("/student/profile", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data"
+        }
       });
 
       toast.success("Profile updated successfully");
@@ -124,10 +128,10 @@ export default function StudentProfile() {
 
   const initials = profile.fullName
     ? profile.fullName
-        .split(" ")
-        .map((n) => n[0])
-        .join("")
-        .toUpperCase()
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
     : "U";
 
   const completionFields = [
@@ -156,7 +160,7 @@ export default function StudentProfile() {
                   src={
                     photo
                       ? URL.createObjectURL(photo)
-                      : `${BASE_URL}${profile.photoUrl}`
+                      : `${import.meta.env.VITE_API_URL}${profile.photoUrl}`
                   }
                   alt="profile"
                   className="w-24 h-24 rounded-full object-cover border border-slate-200"

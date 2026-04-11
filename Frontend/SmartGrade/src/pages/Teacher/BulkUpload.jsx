@@ -8,6 +8,37 @@ import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 
 export default function BulkUpload() {
+
+    useEffect(() => {
+        const token = localStorage.getItem("token");
+
+        if (!token) {
+            window.location.href = "/login";
+        }
+    }, []);
+
+    useEffect(() => {
+        api.get("/teacher/exams")
+            .then(res => setExams(res.data))
+            .catch(() => toast.error("Failed to load exams"));
+    }, []);
+
+    useEffect(() => {
+        if (!selectedExam) return;
+
+        api.get(`/teacher/exams/${selectedExam}/subjects`)
+            .then(res => setSubjects(res.data))
+            .catch(() => toast.error("Failed to load subjects"));
+    }, [selectedExam]);
+
+    useEffect(() => {
+        if (!selectedSubject) return;
+
+        api.get(`/teacher/subjects/${selectedSubject}/sections`)
+            .then(res => setSections(res.data))
+            .catch(() => toast.error("Failed to load sections"));
+    }, [selectedSubject]);
+
     const [exams, setExams] = useState([]);
     const [subjects, setSubjects] = useState([]);
     const [sections, setSections] = useState([]);
@@ -19,38 +50,6 @@ export default function BulkUpload() {
     const [file, setFile] = useState(null);
     const [previewData, setPreviewData] = useState(null);
     const [loading, setLoading] = useState(false);
-
-    const token = localStorage.getItem("token");
-
-    useEffect(() => {
-        axios.get("https://localhost:7247/api/teacher/exams", {
-            headers: { Authorization: `Bearer ${token}` }
-        })
-            .then(res => setExams(res.data))
-            .catch(err => console.error(err));
-    }, []);
-
-    useEffect(() => {
-        if (!selectedExam) return;
-
-        axios.get(
-            `https://localhost:7247/api/teacher/exams/${selectedExam}/subjects`,
-            { headers: { Authorization: `Bearer ${token}` } }
-        )
-            .then(res => setSubjects(res.data))
-            .catch(err => console.error(err));
-    }, [selectedExam]);
-
-    useEffect(() => {
-        if (!selectedSubject) return;
-
-        axios.get(
-            `https://localhost:7247/api/teacher/subjects/${selectedSubject}/sections`,
-            { headers: { Authorization: `Bearer ${token}` } }
-        )
-            .then(res => setSections(res.data))
-            .catch(err => console.error(err));
-    }, [selectedSubject]);
 
     const handlePreview = async () => {
         if (!file || !selectedSection) {
@@ -64,12 +63,11 @@ export default function BulkUpload() {
 
         try {
             setLoading(true);
-            const res = await axios.post(
-                "https://localhost:7247/api/teacher/bulk-upload-preview",
+            const res = await api.post(
+                "/teacher/bulk-upload-preview",
                 formData,
                 {
                     headers: {
-                        Authorization: `Bearer ${token}`,
                         "Content-Type": "multipart/form-data"
                     }
                 }
@@ -77,7 +75,7 @@ export default function BulkUpload() {
 
             setPreviewData(res.data);
             toast.success("Preview generated successfully!");
-            
+
         } catch (err) {
             console.error(err);
             toast.error("Preview failed.");
@@ -88,14 +86,9 @@ export default function BulkUpload() {
 
     const handleConfirm = async () => {
         try {
-            await axios.post(
-                `https://localhost:7247/api/teacher/bulk-upload-confirm?sectionId=${selectedSection}`,
-                previewData,
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`
-                    }
-                }
+            await api.post(
+                `/teacher/bulk-upload-confirm?sectionId=${selectedSection}`,
+                previewData
             );
             toast.success("Bulk upload successful!");
 
@@ -115,7 +108,7 @@ export default function BulkUpload() {
 
                 {/* Header */}
                 <div>
-                    
+
                 </div>
 
                 {/* Step Indicator */}
@@ -217,11 +210,10 @@ export default function BulkUpload() {
                         <button
                             onClick={handlePreview}
                             disabled={!file || !selectedSection}
-                            className={`px-6 py-2.5 rounded-xl text-sm font-medium ${
-                                !file || !selectedSection
-                                    ? "bg-gray-300 text-gray-600"
-                                    : "bg-green-600 text-white hover:bg-green-700"
-                            }`}
+                            className={`px-6 py-2.5 rounded-xl text-sm font-medium ${!file || !selectedSection
+                                ? "bg-gray-300 text-gray-600"
+                                : "bg-green-600 text-white hover:bg-green-700"
+                                }`}
                         >
                             {loading ? "Processing..." : "Preview Upload"}
                         </button>

@@ -89,7 +89,7 @@ export default function StudentAnalytics() {
     ...analytics.weakSubjects.map((s) => ({ name: s, value: 40 })),
   ];
 
-  const sectionData = analytics.weakSections.map((s) => ({
+  const sectionData = (analytics.weakSections || []).map((s) => ({
     name: s,
     value: Number((100 / analytics.weakSections.length).toFixed(1)),
   }));

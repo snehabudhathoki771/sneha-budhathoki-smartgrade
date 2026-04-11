@@ -4,7 +4,13 @@ import { toast } from "react-toastify";
 
 export default function AssessmentSetup() {
 
-  const token = localStorage.getItem("token");
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      window.location.href = "/login";
+    }
+  }, []);
 
   const [exams, setExams] = useState([]);
   const [subjects, setSubjects] = useState([]);
@@ -119,14 +125,15 @@ export default function AssessmentSetup() {
     setLoading(true);
 
     try {
-
+      
       if (editingId) {
-
-        awaitapi.put(`/teacher/sections/${editingId}`, {
+        
+        await api.put(`/teacher/sections/${editingId}`, {
           name: sectionName.trim(),
           weightage: Number(weightage),
           maxMarks: Number(maxMarks)
         });
+        
         toast.success("Section updated successfully");
         setEditingId(null);
 
@@ -172,6 +179,8 @@ export default function AssessmentSetup() {
       toast.info("Deleting section...");
       await api.delete(`/teacher/sections/${confirmModal.id}`);
       toast.success("Section deleted successfully");
+
+      setSections(prev => prev.filter(s => s.id !== confirmModal.id));
     } catch (error) {
       toast.error(error.response?.data || "Error deleting section.");
     }
@@ -198,7 +207,7 @@ export default function AssessmentSetup() {
 
         {/* HEADER */}
         <div>
-          
+
         </div>
 
         {/* SELECT CARD */}

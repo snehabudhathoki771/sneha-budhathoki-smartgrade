@@ -13,6 +13,7 @@ import {
   FaCommentDots,
   FaStar
 } from "react-icons/fa";
+
 import {
   ResponsiveContainer,
   LineChart,
@@ -27,7 +28,16 @@ import { getStudentDashboard, getStudentResults, downloadExamReport } from "../.
 import { toast } from "react-toastify";
 
 export default function StudentDashboard() {
+
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      navigate("/login");
+    }
+  }, [navigate]);
 
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -39,11 +49,17 @@ export default function StudentDashboard() {
 
   const fetchDashboard = async () => {
     try {
+
       const res = await getStudentDashboard();
       setData(res.data);
+
     } catch (err) {
+
       setError("Failed to load dashboard");
+      toast.error("Failed to load dashboard");
+
     } finally {
+
       setLoading(false);
     }
   };
@@ -73,7 +89,9 @@ export default function StudentDashboard() {
       }
 
       const latestTrendExam =
-        data.performanceTrend?.[data.performanceTrend.length - 1];
+        data.performanceTrend?.length
+          ? data.performanceTrend[data.performanceTrend.length - 1]
+          : null;
 
       if (!latestTrendExam) {
         toast.update(toastId, {
@@ -105,18 +123,21 @@ export default function StudentDashboard() {
 
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
+
       link.href = url;
       link.download = `${latestExam.examName}_Report.pdf`;
+
       document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      window.URL.revokeObjectURL(url);
 
       toast.update(toastId, {
         render: "Latest report downloaded successfully",
         type: "success",
         autoClose: 3000
       });
-
-      link.click();
-      document.body.removeChild(link);
     } catch (err) {
       toast.update(toastId, {
         render: "Failed to download latest report",
@@ -128,6 +149,7 @@ export default function StudentDashboard() {
 
   const handleReadFeedback = () => {
     navigate("/student/feedback");
+
   };
 
   if (loading) {

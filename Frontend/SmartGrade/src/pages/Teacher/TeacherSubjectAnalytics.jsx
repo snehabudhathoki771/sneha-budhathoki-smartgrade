@@ -1,4 +1,3 @@
-import axios from "axios";
 import {
     AlertTriangle,
     BarChart3,
@@ -8,8 +7,22 @@ import {
     Search
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import toast from "react-toastify";
+import api from "../../services/api";
 
 export default function TeacherSubjectAnalytics() {
+
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        const token = localStorage.getItem("token");
+
+        if (!token) {
+            navigate("/login");
+        }
+    }, [navigate]);
+
     const [exams, setExams] = useState([]);
     const [selectedExam, setSelectedExam] = useState("");
 
@@ -20,7 +33,6 @@ export default function TeacherSubjectAnalytics() {
     const [loading, setLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
 
-    const token = localStorage.getItem("token");
 
     useEffect(() => {
         fetchExams();
@@ -28,26 +40,27 @@ export default function TeacherSubjectAnalytics() {
 
     const fetchExams = async () => {
         try {
-            const res = await axios.get(
-                "https://localhost:7247/api/teacher/exams",
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
+
+            const res = await api.get("/teacher/exams");
             setExams(res.data);
+
         } catch (err) {
+            
             console.error(err);
+            toast.error("Failed to load exams. Please try again.");
         }
     };
 
     const fetchSubjects = async (examId) => {
         try {
-            const res = await axios.get(
-                `https://localhost:7247/api/teacher/exams/${examId}/subjects`,
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
+            const res = await api.get(`/teacher/exams/${examId}/subjects`);
             setSubjects(res.data);
+
         } catch (err) {
+
             console.error(err);
             setSubjects([]);
+            toast.error("Failed to load subjects. Please try again.");
         }
     };
 
@@ -56,16 +69,17 @@ export default function TeacherSubjectAnalytics() {
             setLoading(true);
             setSearchTerm("");
 
-            const res = await axios.get(
-                `https://localhost:7247/api/teacher/subjects/${subjectId}/analytics`,
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
-
+            const res = await api.get(`/teacher/subjects/${subjectId}/analytics`);
             setAnalytics(res.data);
+
         } catch (err) {
+
             console.error(err);
+            toast.error("Failed to load analytics. Please try again.");
             setAnalytics([]);
+
         } finally {
+
             setLoading(false);
         }
     };
@@ -117,9 +131,9 @@ export default function TeacherSubjectAnalytics() {
 
                 {/* HEADER */}
                 <div className="flex items-center gap-3">
-                    
+
                     <div>
-                        
+
                     </div>
                 </div>
 
@@ -262,13 +276,12 @@ export default function TeacherSubjectAnalytics() {
                                             </div>
                                             <div className="w-full bg-gray-200 h-2 rounded-full">
                                                 <div
-                                                    className={`h-2 rounded-full ${
-                                                        section.percentage < 40
-                                                            ? "bg-red-500"
-                                                            : section.percentage < 60
+                                                    className={`h-2 rounded-full ${section.percentage < 40
+                                                        ? "bg-red-500"
+                                                        : section.percentage < 60
                                                             ? "bg-yellow-400"
                                                             : "bg-green-500"
-                                                    }`}
+                                                        }`}
                                                     style={{ width: `${section.percentage}%` }}
                                                 />
                                             </div>

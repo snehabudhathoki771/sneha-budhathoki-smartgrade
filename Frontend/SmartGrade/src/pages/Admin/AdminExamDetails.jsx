@@ -3,9 +3,20 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 
+
 export default function AdminExamDetails() {
-    const { id } = useParams();
+
     const navigate = useNavigate();
+
+    useEffect(() => {
+        const token = localStorage.getItem("token");
+
+        if (!token) {
+            navigate("/login");
+        }
+    }, [navigate]);
+
+    const { id } = useParams();
 
     const [exam, setExam] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -47,6 +58,7 @@ export default function AdminExamDetails() {
             toast.success("Exam deleted successfully");
 
             navigate("/admin/exams");
+            
         } catch {
             toast.error("Failed to delete exam.");
         } finally {
@@ -153,7 +165,9 @@ export default function AdminExamDetails() {
                         Created
                     </span>
                     <span className="text-gray-800">
-                        {new Date(exam.createdAt).toLocaleDateString()}
+                        {exam.createdAt
+                            ? new Date(exam.createdAt).toLocaleDateString()
+                            : "-"}
                     </span>
                 </div>
 

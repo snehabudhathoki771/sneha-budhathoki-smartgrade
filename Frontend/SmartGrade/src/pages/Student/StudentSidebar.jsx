@@ -1,17 +1,25 @@
 import {
-    LayoutDashboard,
     BarChart3,
     FileText,
+    LayoutDashboard,
+    LogOut,
     MessageSquare,
-    User,
-    LogOut
+    User
 } from "lucide-react";
-import logo from "../../assets/SGlogo.png";
 import { NavLink, useNavigate } from "react-router-dom";
+import logo from "../../assets/SGlogo.png";
 
 function StudentSidebar() {
 
     const navigate = useNavigate();
+    
+    useEffect(() => {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+        navigate("/login");
+    }
+}, [navigate]);
 
     const baseClass =
         "relative flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-slate-600 transition-all duration-200 hover:bg-slate-100 hover:text-slate-900";
@@ -20,8 +28,8 @@ function StudentSidebar() {
         "bg-emerald-50 text-emerald-600 shadow-sm";
 
     const handleLogout = () => {
-        localStorage.removeItem("token");
-        localStorage.removeItem("role");
+        localStorage.clear();
+        navigate("/login"); localStorage.clear();
         navigate("/login");
     };
 

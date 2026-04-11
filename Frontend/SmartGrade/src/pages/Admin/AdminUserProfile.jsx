@@ -2,8 +2,17 @@ import { useEffect, useState } from "react";
 import api from "../../services/api";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
+import { toast } from "react-toastify";
 
 export default function AdminUserProfile() {
+
+    useEffect(() => {
+        const token = localStorage.getItem("token");
+
+        if (!token) {
+            navigate("/login");
+        }
+    }, [navigate]);
 
     const { id } = useParams();
 
@@ -15,7 +24,7 @@ export default function AdminUserProfile() {
 
     useEffect(() => {
         fetchUser();
-    }, []);
+    }, [id]);
 
     const fetchUser = async () => {
 
@@ -27,6 +36,8 @@ export default function AdminUserProfile() {
 
         } catch (err) {
             console.error(err);
+            toast.error("Failed to load user profile");
+
         }
 
     };
@@ -40,8 +51,8 @@ export default function AdminUserProfile() {
     }
 
     const imageUrl = user.photoUrl
-    ? encodeURI(`${BASE_URL}${user.photoUrl}`)
-    : null;
+        ? encodeURI(`${BASE_URL}${user.photoUrl}`)
+        : null;
 
     const initials = user.fullName
         ? user.fullName
@@ -59,7 +70,7 @@ export default function AdminUserProfile() {
             <div className="flex items-center justify-between">
 
                 <div>
-                    
+
                 </div>
 
                 <button
@@ -88,7 +99,7 @@ export default function AdminUserProfile() {
                                 alt="user"
                                 className="w-20 h-20 rounded-full object-cover border"
                                 onError={(e) => {
-                                    e.target.src = "/default-avatar.png";
+                                    e.target.src = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
                                 }}
                             />
 

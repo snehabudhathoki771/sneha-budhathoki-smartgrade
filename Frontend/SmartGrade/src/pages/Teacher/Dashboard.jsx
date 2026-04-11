@@ -1,6 +1,7 @@
-import axios from "axios";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
+import api from "../../services/api";
 
 import {
   Area,
@@ -24,38 +25,33 @@ import {
 
 export default function TeacherDashboard() {
   const navigate = useNavigate();
-  const token = localStorage.getItem("token");
 
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const headers = {
-    Authorization: `Bearer ${token}`,
-  };
-
   useEffect(() => {
+    const token = localStorage.getItem("token");
+
     if (!token) {
       navigate("/login");
       return;
     }
 
     fetchDashboard();
-  }, []);
+  }, [navigate]);
 
   const fetchDashboard = async () => {
     try {
-      const res = await axios.get(
-        "https://localhost:7247/api/teacher/dashboard",
-        { headers }
-      );
-
+      const res = await api.get("/teacher/dashboard");
       setData(res.data);
     } catch (err) {
+      console.error("Dashboard error:", err);
+
       if (err.response?.status === 401) {
-        localStorage.removeItem("token");
+        localStorage.clear();
         navigate("/login");
       } else {
-        console.error("Dashboard error:", err);
+        toast.error("Failed to load dashboard");
       }
     } finally {
       setLoading(false);
@@ -70,7 +66,7 @@ export default function TeacherDashboard() {
     );
   }
 
-  if (!data) {
+  if (!data && !loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F7FAF9]">
         <p className="text-gray-500 text-lg">No data available.</p>

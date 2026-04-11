@@ -1,4 +1,7 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
+import { useNavigate } from "react-router-dom";
 import {
   getNotifications,
   markAllNotificationsRead,
@@ -6,6 +9,17 @@ import {
 } from "../../services/api";
 
 export default function StudentNotifications() {
+
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      navigate("/login");
+    }
+  }, [navigate]);
+
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -15,6 +29,7 @@ export default function StudentNotifications() {
 
   const fetchNotifications = async () => {
     try {
+
       const res = await getNotifications();
 
       const data = Array.isArray(res.data)
@@ -22,23 +37,36 @@ export default function StudentNotifications() {
         : res.data?.$values || [];
 
       setNotifications(data);
+
     } catch (err) {
+
       console.error(err);
+      toast.error("Failed to load notifications");
       setNotifications([]);
+
     } finally {
+      toast.dismiss();
       setLoading(false);
     }
   };
 
   const handleMarkAll = async () => {
-    await markAllNotificationsRead();
-    fetchNotifications();
+    try {
+      await markAllNotificationsRead();
+      fetchNotifications();
+    } catch (err) {
+      toast.error("Failed to mark all as read");
+    }
   };
 
   const handleClick = async (n) => {
     if (!n.isRead) {
-      await markNotificationRead(n.id);
-      fetchNotifications();
+      try {
+        await markNotificationRead(n.id);
+        fetchNotifications();
+      } catch (err) {
+        toast.error("Failed to update notification");
+      }
     }
   };
 
@@ -98,9 +126,8 @@ export default function StudentNotifications() {
           <div
             key={n.id}
             onClick={() => handleClick(n)}
-            className={`bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition cursor-pointer ${
-              !n.isRead ? "ring-1 ring-emerald-200" : ""
-            }`}
+            className={`bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition cursor-pointer ${!n.isRead ? "ring-1 ring-emerald-200" : ""
+              }`}
           >
             <div className="flex justify-between items-start gap-3">
 

@@ -6,6 +6,14 @@ import { toast } from "react-toastify";
 
 export default function AdminTeacherProfile() {
 
+    useEffect(() => {
+        const token = localStorage.getItem("token");
+
+        if (!token) {
+            navigate("/login");
+        }
+    }, [navigate]);
+
     const { id } = useParams();
     const navigate = useNavigate();
 
@@ -36,7 +44,7 @@ export default function AdminTeacherProfile() {
 
     useEffect(() => {
         fetchTeacher();
-    }, []);
+    }, [id]);
 
     if (loading) {
         return (
@@ -82,7 +90,7 @@ export default function AdminTeacherProfile() {
             <div className="flex justify-between items-center">
 
                 <div>
-                    
+
                 </div>
 
                 <button

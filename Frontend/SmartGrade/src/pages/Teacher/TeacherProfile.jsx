@@ -1,13 +1,18 @@
-import axios from "axios";
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import api from "../../services/api";
 
 export default function TeacherProfile() {
 
-    const token = localStorage.getItem("token");
+    const navigate = useNavigate();
 
-    const headers = {
-        Authorization: `Bearer ${token}`
-    };
+    useEffect(() => {
+        const token = localStorage.getItem("token");
+
+        if (!token) {
+            navigate("/login");
+        }
+    }, [navigate]);
 
     const [profile, setProfile] = useState({
         fullName: "",
@@ -23,7 +28,7 @@ export default function TeacherProfile() {
     const [updating, setUpdating] = useState(false);
     const [uploading, setUploading] = useState(false);
 
-    // ✅ TOAST STATE
+    // TOAST STATE
     const [toasts, setToasts] = useState([]);
 
     const showToast = (type, text) => {
@@ -43,10 +48,7 @@ export default function TeacherProfile() {
 
         try {
 
-            const res = await axios.get(
-                "https://localhost:7247/api/teacher/profile",
-                { headers }
-            );
+            const res = await api.get("/teacher/profile");
 
             setProfile({
                 ...res.data,
@@ -89,12 +91,11 @@ export default function TeacherProfile() {
 
             showToast("info", "Uploading photo...");
 
-            const res = await axios.post(
-                "https://localhost:7247/api/teacher/profile/photo",
+            const res = await api.post(
+                "/teacher/profile/photo",
                 formData,
                 {
                     headers: {
-                        Authorization: `Bearer ${token}`,
                         "Content-Type": "multipart/form-data"
                     }
                 }
@@ -138,11 +139,7 @@ export default function TeacherProfile() {
                         : null
             };
 
-            await axios.put(
-                "https://localhost:7247/api/teacher/profile",
-                payload,
-                { headers }
-            );
+            await api.put("/teacher/profile", payload);
 
             showToast("success", "Profile updated successfully");
 
@@ -215,7 +212,7 @@ export default function TeacherProfile() {
                         <img
                             src={
                                 profile.photoUrl
-                                    ? `https://localhost:7247${profile.photoUrl}`
+                                    ? `${import.meta.env.VITE_API_URL}${profile.photoUrl}`
                                     : "https://cdn-icons-png.flaticon.com/512/149/149071.png"
                             }
                             onError={(e) => {

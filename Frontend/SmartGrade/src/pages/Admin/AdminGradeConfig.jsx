@@ -1,8 +1,18 @@
+import { Pencil, PlusCircle, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import api from "../../services/api";
-import { Pencil, Trash2, PlusCircle } from "lucide-react";
 
 export default function AdminGradeConfig() {
+    const navigate = useNavigate();
+    useEffect(() => {
+        const token = localStorage.getItem("token");
+
+        if (!token) {
+            navigate("/login");
+        }
+    }, [navigate]);
+
     const [grades, setGrades] = useState([]);
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState(null);
@@ -201,7 +211,7 @@ export default function AdminGradeConfig() {
 
                             <tbody className="divide-y divide-gray-100">
 
-                                {grades.map((grade) => (
+                                {(grades || []).map((grade) => (
 
                                     <tr key={grade.id} className="hover:bg-gray-50 transition">
 
@@ -223,15 +233,15 @@ export default function AdminGradeConfig() {
 
                                         <td className="p-4">
                                             <span className={`px-3 py-1 text-xs rounded-full font-semibold ${grade.isActive
-                                                    ? "bg-emerald-100 text-emerald-600"
-                                                    : "bg-gray-200 text-gray-600"
+                                                ? "bg-emerald-100 text-emerald-600"
+                                                : "bg-gray-200 text-gray-600"
                                                 }`}>
                                                 {grade.isActive ? "Active" : "Inactive"}
                                             </span>
                                         </td>
 
                                         <td className="p-4">
-                                            
+
                                             <div className="flex justify-end items-center gap-3">
 
                                                 <button
@@ -249,7 +259,7 @@ export default function AdminGradeConfig() {
                                                 </button>
 
                                             </div>
-                                            
+
                                         </td>
 
                                     </tr>

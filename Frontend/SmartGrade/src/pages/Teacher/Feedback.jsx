@@ -1,14 +1,19 @@
-import axios from "axios";
-import { useEffect, useState } from "react";
 import { Send, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
+import api from "../../services/api";
 
 export default function Feedback() {
-  const token = localStorage.getItem("token");
 
-  const headers = {
-    Authorization: `Bearer ${token}`,
-  };
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      navigate("/login");
+    }
+  }, [navigate]);
 
   const [students, setStudents] = useState([]);
   const [exams, setExams] = useState([]);
@@ -40,15 +45,9 @@ export default function Feedback() {
 
       setLoading(true);
 
-      const studentsRes = await axios.get(
-        "https://localhost:7247/api/teacher/students",
-        { headers }
-      );
+      const studentsRes = await api.get("/teacher/students");
 
-      const examsRes = await axios.get(
-        "https://localhost:7247/api/teacher/exams",
-        { headers }
-      );
+      const examsRes = await api.get("/teacher/exams");
 
       setStudents(studentsRes.data);
       setExams(examsRes.data);
@@ -64,10 +63,7 @@ export default function Feedback() {
 
   const loadFeedback = async () => {
     try {
-      const res = await axios.get(
-        "https://localhost:7247/api/teacher/feedback",
-        { headers }
-      );
+      const res = await api.get("/teacher/feedback");
 
       setFeedbackList(res.data);
 
@@ -92,17 +88,13 @@ export default function Feedback() {
     try {
       setSubmitting(true);
 
-      await axios.post(
-        "https://localhost:7247/api/teacher/feedback",
-        {
-          studentId: parseInt(selectedStudent),
-          examId: parseInt(selectedExam),
-          subject: subject || null,
-          rating: rating || null,
-          message: message.trim(),
-        },
-        { headers }
-      );
+      await api.post("/teacher/feedback", {
+        studentId: parseInt(selectedStudent),
+        examId: parseInt(selectedExam),
+        subject: subject || null,
+        rating: rating || null,
+        message: message.trim(),
+      });
 
       toast.success("Feedback sent successfully.");
 
@@ -132,10 +124,8 @@ export default function Feedback() {
     try {
       toast.info("Deleting feedback...");
 
-      await axios.delete(
-        `https://localhost:7247/api/teacher/feedback/${confirmModal.id}`,
-        { headers }
-      );
+      await api.delete(`/teacher/feedback/${confirmModal.id}`);
+      toast.success("Feedback deleted");
 
       await loadFeedback();
     } catch (error) {

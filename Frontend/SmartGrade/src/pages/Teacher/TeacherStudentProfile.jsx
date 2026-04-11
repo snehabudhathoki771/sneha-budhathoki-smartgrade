@@ -1,17 +1,23 @@
-import axios from "axios";
 import { ArrowLeft } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { toast } from "react-toastify";
+import api from "../../services/api";
 
 export default function TeacherStudentProfile() {
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      navigate("/login");
+    }
+  }, [navigate]);
 
   const { id } = useParams();
   const navigate = useNavigate();
 
   const [data, setData] = useState(null);
-
-  const token = localStorage.getItem("token");
-  const BASE_URL = "https://localhost:7247";
 
   useEffect(() => {
     fetchStudent();
@@ -20,19 +26,12 @@ export default function TeacherStudentProfile() {
   const fetchStudent = async () => {
     try {
 
-      const res = await axios.get(
-        `${BASE_URL}/api/teacher/students/${id}/full-profile`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      );
-
+      const res = await api.get(`/teacher/students/${id}/full-profile`);
       setData(res.data);
 
     } catch (err) {
       console.error(err);
+      toast.error("Failed to load student profile. Please try again.");
     }
   };
 
@@ -43,7 +42,7 @@ export default function TeacherStudentProfile() {
   const { student, subjects, strongSubjects, weakSubjects, average, consistency } = data;
 
   const imageUrl = student.photoUrl
-    ? encodeURI(`${BASE_URL}${student.photoUrl}`)
+    ? encodeURI(`${import.meta.env.VITE_API_URL}${student.photoUrl}`)
     : null;
 
   const initials = student.fullName
@@ -240,11 +239,10 @@ export default function TeacherStudentProfile() {
                     return (
                       <div
                         key={i}
-                        className={`px-4 py-2 rounded-lg text-sm ${
-                          isWeak
-                            ? "bg-red-50 text-red-600"
-                            : "bg-green-50 text-green-700"
-                        }`}
+                        className={`px-4 py-2 rounded-lg text-sm ${isWeak
+                          ? "bg-red-50 text-red-600"
+                          : "bg-green-50 text-green-700"
+                          }`}
                       >
                         {sub.subject} — {sub.percentage}%
                       </div>

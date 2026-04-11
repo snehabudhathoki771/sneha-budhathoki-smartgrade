@@ -7,8 +7,21 @@ import {
     FaExclamationTriangle,
     FaClock
 } from "react-icons/fa";
+import { toast } from "react-toastify";
+import { useNavigate } from "react-router-dom";
 
 export default function StudentFeedback() {
+
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        const token = localStorage.getItem("token");
+
+        if (!token) {
+            navigate("/login");
+        }
+    }, [navigate]);
+
     const [feedbacks, setFeedbacks] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -31,6 +44,7 @@ export default function StudentFeedback() {
             setFeedbacks(sortedData);
         } catch (err) {
             console.error(err);
+            toast.error("Failed to load feedback. Please try again later.");
         } finally {
             setLoading(false);
         }
@@ -56,9 +70,8 @@ export default function StudentFeedback() {
                 {[1, 2, 3, 4, 5].map((star) => (
                     <FaStar
                         key={star}
-                        className={`text-sm ${
-                            star <= rating ? "opacity-100" : "opacity-20"
-                        }`}
+                        className={`text-sm ${star <= rating ? "opacity-100" : "opacity-20"
+                            }`}
                     />
                 ))}
             </div>
@@ -68,9 +81,9 @@ export default function StudentFeedback() {
     const avgRating =
         feedbacks.length > 0
             ? (
-                  feedbacks.reduce((sum, f) => sum + f.rating, 0) /
-                  feedbacks.length
-              ).toFixed(1)
+                feedbacks.reduce((sum, f) => sum + (f.rating || 0), 0) /
+                feedbacks.length
+            ).toFixed(1)
             : 0;
 
     const improvementAlerts = feedbacks.filter(
@@ -162,15 +175,15 @@ export default function StudentFeedback() {
                         f.rating >= 4
                             ? "Excellent"
                             : f.rating >= 3
-                            ? "Good"
-                            : "Needs Improvement";
+                                ? "Good"
+                                : "Needs Improvement";
 
                     const badgeClass =
                         f.rating >= 4
                             ? "bg-emerald-100 text-emerald-700"
                             : f.rating >= 3
-                            ? "bg-slate-100 text-slate-700"
-                            : "bg-amber-100 text-amber-700";
+                                ? "bg-slate-100 text-slate-700"
+                                : "bg-amber-100 text-amber-700";
 
                     return (
                         <div

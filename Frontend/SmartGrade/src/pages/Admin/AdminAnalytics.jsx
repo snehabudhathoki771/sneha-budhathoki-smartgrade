@@ -5,6 +5,7 @@ import {
     FaGraduationCap,
     FaUsers
 } from "react-icons/fa";
+import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import {
     Bar,
@@ -56,13 +57,23 @@ function StatCard({ title, value, icon, color }) {
 }
 
 export default function AdminAnalytics() {
+
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        const token = localStorage.getItem("token");
+
+        if (!token) {
+            navigate("/login");
+        }
+    }, [navigate]);
+
     const [examsPerYear, setExamsPerYear] = useState([]);
     const [passFail, setPassFail] = useState({ passed: 0, failed: 0 });
     const [avgSubject, setAvgSubject] = useState([]);
     const [teacherPerf, setTeacherPerf] = useState([]);
     const [loading, setLoading] = useState(false);
 
-    const token = localStorage.getItem("token");
 
     useEffect(() => {
         fetchAnalytics();
@@ -101,20 +112,20 @@ export default function AdminAnalytics() {
             toast.info("Preparing report...");
 
             const response = await api.get("/admin/analytics/report", {
-                headers: {
-                    Authorization: `Bearer ${token}`
-                },
                 responseType: "blob"
-                }
-            );
+            });
 
             const url = window.URL.createObjectURL(new Blob([response.data]));
+
             const link = document.createElement("a");
             link.href = url;
             link.setAttribute("download", "SmartGrade_Analytics_Report.pdf");
+
             document.body.appendChild(link);
             link.click();
-            link.remove();
+            document.body.removeChild(link);
+
+            window.URL.revokeObjectURL(url);
 
             toast.success("Report downloaded successfully");
         } catch (err) {
@@ -129,9 +140,8 @@ export default function AdminAnalytics() {
     ];
 
     const filteredTeachers = useMemo(() => {
-        return teacherPerf.filter(
-            (teacher) => teacher.averageScore > 0
-        );
+        return teacherPerf.filter((teacher) => (teacher.averageScore || 0) > 0)
+        
     }, [teacherPerf]);
 
     const totalExams = examsPerYear.reduce(

@@ -54,8 +54,12 @@ namespace SmartGrade.Controllers
                 FullName = request.FullName,
                 Email = email,
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
-                Role = request.Role == "Teacher" ? "Teacher" : "Student"
-            };
+                Role = request.Role == "Teacher"
+                ? "Teacher"
+                : request.Role == "Admin"
+                    ? "Admin"
+                    : "Student"
+                        };
 
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
@@ -139,12 +143,12 @@ namespace SmartGrade.Controllers
 
             // create claims
             var claims = new List<Claim>
-    {
-        new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-        new Claim(ClaimTypes.Name, user.Email),
-        new Claim(ClaimTypes.Email, user.Email),
-        new Claim(ClaimTypes.Role, user.Role)
-    };
+            {
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                new Claim(ClaimTypes.Name, user.Email),
+                new Claim(ClaimTypes.Email, user.Email),
+                new Claim(ClaimTypes.Role, user.Role)
+            };
 
             // jwt config
             var key = new SymmetricSecurityKey(

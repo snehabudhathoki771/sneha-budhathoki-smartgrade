@@ -1,10 +1,19 @@
-import axios from "axios";
+import api from "../../services/api";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { toast } from "react-toastify";
 
 export default function SubjectManagement() {
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      navigate("/login");
+    }
+  }, [navigate]);
+
   const { examId } = useParams();
-  const token = localStorage.getItem("token");
   const navigate = useNavigate();
 
   const [subjects, setSubjects] = useState([]);
@@ -23,14 +32,8 @@ export default function SubjectManagement() {
     try {
       setLoading(true);
 
-      const res = await axios.get(
-        `https://localhost:7247/api/teacher/exams/${examId}/subjects`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const res = await api.get(`/teacher/exams/${examId}/subjects`);
+      setSubjects(res.data);
 
       setSubjects([...res.data]);
 
@@ -53,28 +56,16 @@ export default function SubjectManagement() {
 
     try {
       if (editingId) {
-        await axios.put(
-          `https://localhost:7247/api/teacher/subjects/${editingId}`,
-          { name: subjectName },
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
+        await api.put(`/teacher/subjects/${editingId}`, {
+          name: subjectName
+        });
+        toast.success("Subject updated");
       } else {
-        await axios.post(
-          "https://localhost:7247/api/teacher/subject",
-          {
-            name: subjectName,
-            examId: Number(examId),
-          },
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
+        await api.post("/teacher/subject", {
+          name: subjectName,
+          examId: Number(examId),
+        });
+        toast.success("Subject added");
       }
 
       setSubjectName("");
@@ -98,14 +89,8 @@ export default function SubjectManagement() {
   // CONFIRM DELETE
   const confirmDelete = async () => {
     try {
-      await axios.delete(
-        `https://localhost:7247/api/teacher/subjects/${confirmModal.id}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      await api.delete(`/teacher/subjects/${confirmModal.id}`);
+      toast.success("Subject deleted");
 
       await fetchSubjects();
     } catch (err) {
@@ -133,7 +118,7 @@ export default function SubjectManagement() {
 
         {/* HEADER */}
         <div className="mb-6 flex justify-end">
-          
+
           <button
             onClick={() => navigate("/teacher/exams")}
             className="flex items-center gap-1 px-4 py-2 text-sm border border-gray-200 rounded-xl hover:bg-gray-100 transition"

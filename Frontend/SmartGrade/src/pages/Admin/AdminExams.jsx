@@ -1,10 +1,21 @@
-import api from "../../services/api";
 import { Eye, Search, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import api from "../../services/api";
 
 export default function AdminExams() {
+
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        const token = localStorage.getItem("token");
+
+        if (!token) {
+            navigate("/login");
+        }
+    }, [navigate]);
+
     const [exams, setExams] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -23,8 +34,6 @@ export default function AdminExams() {
         message: ""
     });
 
-    const navigate = useNavigate();
-
     // FETCH EXAMS
     const fetchExams = async () => {
         try {
@@ -41,10 +50,14 @@ export default function AdminExams() {
         fetchExams();
     }, []);
 
+    const uniqueYears = [...new Set(exams.map(e => e.academicYear))];
+
+    const uniqueTeachers = [...new Set(exams.map(e => e.teacherName))];
+
     // FILTER DATA
     const filteredExams = useMemo(() => {
         return exams.filter(exam =>
-            exam.name.toLowerCase().includes(search.toLowerCase()) &&
+            (exam.name || "").toLowerCase().includes(search.toLowerCase()) &&
             (selectedYear === "" || exam.academicYear === selectedYear) &&
             (selectedTeacher === "" || exam.teacherName === selectedTeacher) &&
             (selectedStatus === "" || exam.status === selectedStatus)
@@ -54,6 +67,12 @@ export default function AdminExams() {
     useEffect(() => {
         setCurrentPage(1);
     }, [search, selectedYear, selectedTeacher, selectedStatus]);
+
+    const changePage = (page) => {
+        if (page >= 1 && page <= totalPages) {
+            setCurrentPage(page);
+        }
+    };
 
     const totalPages = Math.ceil(filteredExams.length / examsPerPage);
     const currentExams = filteredExams.slice(
@@ -118,7 +137,7 @@ export default function AdminExams() {
     };
 
     if (loading) return <div>Loading...</div>;
-    
+
     return (
         <div className="space-y-6">
 

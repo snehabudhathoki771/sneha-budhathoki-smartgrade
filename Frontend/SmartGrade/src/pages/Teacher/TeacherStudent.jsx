@@ -1,22 +1,23 @@
-import axios from "axios";
 import { Search, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
+import api from "../../services/api";
 
 export default function TeacherStudents() {
+
+    useEffect(() => {
+        const token = localStorage.getItem("token");
+
+        if (!token) {
+            navigate("/login");
+        }
+    }, [navigate]);
 
     const [students, setStudents] = useState([]);
     const [search, setSearch] = useState("");
 
     const navigate = useNavigate();
-
-    const token = localStorage.getItem("token");
-
-    const BASE_URL = "https://localhost:7247";
-
-    const headers = {
-        Authorization: `Bearer ${token}`
-    };
 
     useEffect(() => {
         fetchStudents();
@@ -25,15 +26,12 @@ export default function TeacherStudents() {
     const fetchStudents = async () => {
         try {
 
-            const res = await axios.get(
-                "https://localhost:7247/api/teacher/students",
-                { headers }
-            );
-
+            const res = await api.get("/teacher/students");
             setStudents(res.data);
 
         } catch (err) {
             console.error(err);
+            toast.error("Failed to load students");
         }
     };
 
@@ -132,7 +130,7 @@ export default function TeacherStudents() {
                                         .toUpperCase();
 
                                     const imageUrl = s.photoUrl
-                                        ? encodeURI(`${BASE_URL}${s.photoUrl}`)
+                                        ? encodeURI(`${import.meta.env.VITE_API_URL}${s.photoUrl}`)
                                         : null;
 
                                     return (
@@ -164,7 +162,6 @@ export default function TeacherStudents() {
                                                         <div className="w-10 h-10 rounded-full bg-green-600 text-white flex items-center justify-center text-sm font-semibold shadow-sm">
                                                             {initials}
                                                         </div>
-
                                                     )}
 
                                                     <div className="font-medium text-gray-800">

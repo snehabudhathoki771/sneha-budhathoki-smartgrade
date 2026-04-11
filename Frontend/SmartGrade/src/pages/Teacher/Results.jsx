@@ -1,7 +1,6 @@
-import axios from "axios";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-
+import { toast } from "react-toastify";
 import {
   Bar,
   BarChart,
@@ -15,6 +14,7 @@ import {
   XAxis,
   YAxis
 } from "recharts";
+import api from "../../services/api";
 
 import {
   BarChart3,
@@ -26,14 +26,18 @@ import {
 
 export default function Results() {
 
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      navigate("/login");
+    }
+  }, [navigate]);
+
   const [searchParams] = useSearchParams();
   const examId = searchParams.get("examId");
-
-  const token = localStorage.getItem("token");
-
-  const headers = {
-    Authorization: `Bearer ${token}`,
-  };
 
   const [exams, setExams] = useState([]);
   const [selectedExam, setSelectedExam] = useState(examId || "");
@@ -44,11 +48,9 @@ export default function Results() {
 
   useEffect(() => {
 
-    axios
-      .get("https://localhost:7247/api/teacher/exams", { headers })
-      .then((res) => {
-        setExams(res.data);
-      });
+    api.get("/teacher/exams")
+      .then((res) => setExams(res.data))
+      .catch(() => toast.error("Failed to load exams"));
 
   }, []);
 
@@ -71,22 +73,17 @@ export default function Results() {
       return;
     }
 
-    axios
-      .get(
-        `https://localhost:7247/api/teacher/exams/${selectedExam}/results`,
-        { headers }
-      )
+    api.get(`/teacher/exams/${selectedExam}/results`)
       .then((res) => {
-
         const sorted = [...res.data].sort(
           (a, b) => b.overallPercentage - a.overallPercentage
         );
-
         setResults(sorted);
-
-      });
+      })
+      .catch(() => toast.error("Failed to load results"));
 
   }, [selectedExam]);
+
 
   /* LOAD EXAM STATUS */
 
@@ -97,19 +94,12 @@ export default function Results() {
       return;
     }
 
-    axios
-      .get(
-        `https://localhost:7247/api/teacher/exams/${selectedExam}/status`,
-        { headers }
-      )
+    api.get(`/teacher/exams/${selectedExam}/status`)
       .then((res) => {
-        console.log("STATUS API RESPONSE:", res.data);
         const status = res.data.status || res.data;
         setExamStatus(String(status).toLowerCase());
       })
-            .catch(() => {
-        setExamStatus("");
-      });
+      .catch(() => setExamStatus(""));
 
   }, [selectedExam]);
 
@@ -162,12 +152,9 @@ export default function Results() {
 
     try {
 
-      const response = await axios.get(
-        `https://localhost:7247/api/teacher/exams/${selectedExam}/export-pdf`,
-        {
-          headers,
-          responseType: "blob"
-        }
+      const response = await api.get(
+        `/teacher/exams/${selectedExam}/export-pdf`,
+        { responseType: "blob" }
       );
 
       const url = window.URL.createObjectURL(new Blob([response.data]));
@@ -188,16 +175,16 @@ export default function Results() {
         try {
           const err = JSON.parse(reader.result);
 
-          alert(err.message || "PDF export failed");
+          toast.error(err.message || "PDF export failed");
 
         } catch {
-          alert("PDF export failed");
+          toast.error("PDF export failed");
         }
       };
       if (error.response?.data instanceof Blob) {
         reader.readAsText(error.response.data);
       } else {
-        alert("Something went wrong");
+        toast.error("Something went wrong");
       }
 
       console.error(error);

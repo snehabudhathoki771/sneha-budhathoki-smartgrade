@@ -9,8 +9,17 @@ import {
 } from "lucide-react";
 import logo from "../../assets/SGlogo.png";
 import { NavLink, useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 
 function AdminSidebar() {
+
+    useEffect(() => {
+        const token = localStorage.getItem("token");
+
+        if (!token) {
+            navigate("/login");
+        }
+    }, [navigate]);
 
     const navigate = useNavigate();
 
@@ -21,10 +30,8 @@ function AdminSidebar() {
         "bg-emerald-50 text-emerald-600 shadow-sm";
 
     const handleLogout = () => {
-        localStorage.removeItem("token");
-        localStorage.removeItem("userId");
-        localStorage.removeItem("role");
-        navigate("/");
+        localStorage.clear();
+        navigate("/login");
     };
 
     return (
