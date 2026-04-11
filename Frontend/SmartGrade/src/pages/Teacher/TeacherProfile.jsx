@@ -136,7 +136,7 @@ export default function TeacherProfile() {
                 formData.append("gender", profile.gender);
             }
 
-            if (profile.dateOfBirth && profile.dateOfBirth !== "") {
+            if (profile.dateOfBirth) {
                 formData.append("dateOfBirth", profile.dateOfBirth);
             }
 
