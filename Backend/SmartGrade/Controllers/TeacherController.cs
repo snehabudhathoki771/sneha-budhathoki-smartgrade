@@ -1218,7 +1218,8 @@ namespace SmartGrade.Controllers
         }
 
         [HttpPut("profile")]
-        public async Task<IActionResult> UpdateTeacherProfile([FromBody] UpdateTeacherProfileDto dto)
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> UpdateTeacherProfile([FromForm] UpdateTeacherProfileDto dto)
         {
             Console.WriteLine(dto.FullName);
             Console.WriteLine(dto.Phone);

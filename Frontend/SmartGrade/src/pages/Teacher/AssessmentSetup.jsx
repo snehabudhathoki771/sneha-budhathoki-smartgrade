@@ -1,6 +1,6 @@
-import api from "../../services/api";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
+import api from "../../services/api";
 
 export default function AssessmentSetup() {
 
@@ -37,7 +37,6 @@ export default function AssessmentSetup() {
       const res = await api.get("/teacher/exams")
       setExams(res.data);
     } catch {
-      toast.error("Failed to load exams");
     }
   };
 
