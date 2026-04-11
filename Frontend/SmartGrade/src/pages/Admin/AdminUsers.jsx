@@ -491,14 +491,26 @@ export default function AdminUsers() {
                                                         <div className="flex items-center gap-3">
 
                                                             <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center">
-                                                                {user.photoUrl ? (
+                                                                {user.role === "Teacher" ? (
+                                                                    <img
+                                                                        src={`${import.meta.env.VITE_API_URL}/api/admin/teachers/${user.id}/photo`}
+                                                                        alt={user.fullName}
+                                                                        className="w-full h-full object-cover"
+                                                                        onError={(e) => {
+                                                                            e.target.onerror = null;
+                                                                            e.target.src = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+                                                                        }}
+                                                                    />
+                                                                ) : user.photoUrl ? (
                                                                     <img
                                                                         src={`${import.meta.env.VITE_API_URL.replace('/api', '')}/${user.photoUrl}`}
                                                                         alt={user.fullName}
                                                                         className="w-full h-full object-cover"
                                                                     />
                                                                 ) : (
-                                                                    <div className={`w-full h-full ${avatarColor(user.fullName)} text-white flex items-center justify-center text-sm font-semibold`}>
+                                                                    <div
+                                                                        className={`w-full h-full ${avatarColor(user.fullName)} text-white flex items-center justify-center text-sm font-semibold`}
+                                                                    >
                                                                         {initials}
                                                                     </div>
                                                                 )}
@@ -537,7 +549,7 @@ export default function AdminUsers() {
                                                         <div className="flex flex-col gap-1">
 
                                                             <span className={`px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-2 w-fit
-                                                        ${user.isActive
+                                                                        ${user.isActive
                                                                     ? "bg-green-100 text-green-700"
                                                                     : "bg-gray-200 text-gray-600"
                                                                 }`}>

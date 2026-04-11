@@ -1,20 +1,11 @@
-import api from "../../services/api";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
+import api from "../../services/api";
 
 export default function SubjectManagement() {
-
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-
-    if (!token) {
-      navigate("/login");
-    }
-  }, [navigate]);
-
-  const { examId } = useParams();
   const navigate = useNavigate();
+  const { examId } = useParams();
 
   const [subjects, setSubjects] = useState([]);
   const [subjectName, setSubjectName] = useState("");
@@ -27,6 +18,14 @@ export default function SubjectManagement() {
     id: null
   });
 
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      navigate("/login");
+    }
+  }, [navigate]);
+  
   // FETCH SUBJECTS
   const fetchSubjects = async () => {
     try {
@@ -35,24 +34,28 @@ export default function SubjectManagement() {
       const res = await api.get(`/teacher/exams/${examId}/subjects`);
       setSubjects(res.data);
 
-      setSubjects([...res.data]);
-
     } catch (err) {
       console.error(err);
+      toast.error("Failed to load subjects");
+
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (examId) {
-      fetchSubjects();
-    }
+    if (examId) fetchSubjects();
   }, [examId]);
 
-  // Add or update subject 
+  // Add or update subject
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!subjectName.trim()) {
+      toast.warning("Enter subject name");
+      return;
+    }
+
 
     try {
       if (editingId) {
@@ -70,11 +73,11 @@ export default function SubjectManagement() {
 
       setSubjectName("");
       setEditingId(null);
-
       await fetchSubjects();
 
     } catch (err) {
       console.error(err);
+      toast.error("Failed to save subject");
     }
   };
 
@@ -93,8 +96,11 @@ export default function SubjectManagement() {
       toast.success("Subject deleted");
 
       await fetchSubjects();
+      
     } catch (err) {
       console.error(err);
+      toast.error("Failed to delete subject");
+
     } finally {
       setConfirmModal({ open: false, id: null });
     }

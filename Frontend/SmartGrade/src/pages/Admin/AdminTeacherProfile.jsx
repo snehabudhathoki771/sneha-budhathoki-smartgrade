@@ -1,13 +1,13 @@
-import api from "../../services/api";
+import { ArrowLeft } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
 import { toast } from "react-toastify";
+import api from "../../services/api";
 
 export default function AdminTeacherProfile() {
-    
+
     const navigate = useNavigate();
-    
+
     useEffect(() => {
         const token = localStorage.getItem("token");
 
@@ -111,13 +111,13 @@ export default function AdminTeacherProfile() {
                 <div className="flex items-center gap-6 p-6 border-b border-gray-100">
 
                     <img
-                        src={
-                            teacher.photoUrl
-                                ? `${BASE_URL}${teacher.photoUrl}`
-                                : "https://cdn-icons-png.flaticon.com/512/149/149071.png"
-                        }
+                        src={`${BASE_URL}/api/admin/teachers/${id}/photo?${Date.now()}`}
                         alt="Teacher"
                         className="w-20 h-20 rounded-full object-cover border"
+                        onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+                        }}
                     />
 
                     <div>
@@ -148,7 +148,7 @@ export default function AdminTeacherProfile() {
                             value={
                                 teacher.dateOfBirth
                                     ? teacher.dateOfBirth.split("T")[0]
-                                    : null
+                                    : "Not provided"
                             }
                         />
                         <DetailItem label="Address" value={teacher.address} />

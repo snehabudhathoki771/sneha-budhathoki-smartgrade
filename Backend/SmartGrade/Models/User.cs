@@ -61,5 +61,11 @@ namespace SmartGrade.Models
 
         [Column("guardian_phone")]
         public string? GuardianPhone { get; set; }
+
+        [Column("photodata")]
+        public byte[]? PhotoData { get; set; }
+
+        [Column("phototype")]
+        public string? PhotoType { get; set; }
     }
 }

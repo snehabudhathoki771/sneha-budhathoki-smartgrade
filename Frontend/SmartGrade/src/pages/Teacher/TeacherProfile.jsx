@@ -20,13 +20,13 @@ export default function TeacherProfile() {
         phone: "",
         dateOfBirth: "",
         gender: "",
-        address: "",
-        photoUrl: ""
+        address: ""
     });
 
     const [loading, setLoading] = useState(true);
     const [updating, setUpdating] = useState(false);
     const [uploading, setUploading] = useState(false);
+    const [imageKey, setImageKey] = useState(Date.now());
 
     // TOAST STATE
     const [toasts, setToasts] = useState([]);
@@ -91,7 +91,7 @@ export default function TeacherProfile() {
 
             showToast("info", "Uploading photo...");
 
-            const res = await api.post(
+            await api.post(
                 "/teacher/profile/photo",
                 formData,
                 {
@@ -101,11 +101,7 @@ export default function TeacherProfile() {
                 }
             );
 
-            setProfile(prev => ({
-                ...prev,
-                photoUrl: res.data.photoUrl
-            }));
-
+            setImageKey(Date.now());
             showToast("success", "Photo uploaded successfully");
 
         } catch {
@@ -174,7 +170,7 @@ export default function TeacherProfile() {
 
         <div className="px-10 pt-6 pb-10 bg-gradient-to-br from-gray-50 via-white to-gray-100 min-h-screen">
 
-            {/* ✅ TOASTER (TOP RIGHT) */}
+            {/*  TOASTER (TOP RIGHT) */}
             <div className="fixed top-5 right-5 space-y-3 z-50">
                 {toasts.map(t => (
                     <div
@@ -210,16 +206,12 @@ export default function TeacherProfile() {
                     <label className="cursor-pointer relative group">
 
                         <img
-                            src={
-                                profile.photoUrl
-                                    ? `${import.meta.env.VITE_API_URL}${profile.photoUrl}`
-                                    : "https://cdn-icons-png.flaticon.com/512/149/149071.png"
-                            }
+                            src={`${import.meta.env.VITE_API_URL}/api/teacher/profile/photo?${imageKey}`}
+                            alt="profile"
+                            className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg"
                             onError={(e) => {
                                 e.target.src = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
                             }}
-                            alt="profile"
-                            className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg"
                         />
 
                         <div className="absolute bottom-1 right-1 w-9 h-9 bg-green-600 rounded-full flex items-center justify-center shadow-lg border-2 border-white group-hover:scale-110 transition">

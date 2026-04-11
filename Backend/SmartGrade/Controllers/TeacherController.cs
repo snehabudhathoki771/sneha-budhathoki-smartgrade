@@ -1206,8 +1206,7 @@ namespace SmartGrade.Controllers
                     u.Phone,
                     u.Address,
                     u.DateOfBirth,
-                    u.Gender,
-                    u.PhotoUrl
+                    u.Gender
                 })
                 .FirstOrDefaultAsync();
 
@@ -1254,29 +1253,36 @@ namespace SmartGrade.Controllers
 
             var teacherId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
-            var teacher = await _context.Users.FirstOrDefaultAsync(u => u.Id == teacherId);
+            var teacher = await _context.Users
+                .FirstOrDefaultAsync(u => u.Id == teacherId);
 
             if (teacher == null)
                 return NotFound("Teacher not found.");
 
-            var uploadsFolder = Path.Combine("wwwroot", "uploads");
-
-            if (!Directory.Exists(uploadsFolder))
-                Directory.CreateDirectory(uploadsFolder);
-
-            var fileName = $"{Guid.NewGuid()}_{photo.FileName}";
-            var filePath = Path.Combine(uploadsFolder, fileName);
-
-            using (var stream = new FileStream(filePath, FileMode.Create))
+            using (var memoryStream = new MemoryStream())
             {
-                await photo.CopyToAsync(stream);
-            }
+                await photo.CopyToAsync(memoryStream);
 
-            teacher.PhotoUrl = $"/uploads/{fileName}";
+                teacher.PhotoData = memoryStream.ToArray();
+                teacher.PhotoType = photo.ContentType;
+            }
 
             await _context.SaveChangesAsync();
 
-            return Ok(new { photoUrl = teacher.PhotoUrl });
+            return Ok(new { message = "Photo uploaded successfully" });
+        }
+
+        [HttpGet("profile/photo")]
+        public async Task<IActionResult> GetTeacherPhoto()
+        {
+            var teacherId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+            var teacher = await _context.Users.FindAsync(teacherId);
+
+            if (teacher == null || teacher.PhotoData == null)
+                return NotFound("No photo found");
+
+            return File(teacher.PhotoData, teacher.PhotoType ?? "image/png");
         }
 
 
