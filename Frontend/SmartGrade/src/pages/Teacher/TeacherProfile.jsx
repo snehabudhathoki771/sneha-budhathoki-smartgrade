@@ -27,6 +27,7 @@ export default function TeacherProfile() {
     const [loading, setLoading] = useState(true);
     const [updating, setUpdating] = useState(false);
     const [imageKey, setImageKey] = useState(Date.now());
+    const [selectedFile, setSelectedFile] = useState(null);
 
     // TOAST STATE
     const [toasts, setToasts] = useState([]);
@@ -107,11 +108,9 @@ export default function TeacherProfile() {
                 formData.append("dateOfBirth", profile.dateOfBirth);
             }
 
-            const fileInput = document.querySelector('input[type="file"]');
-            if (fileInput && fileInput.files[0]) {
-                formData.append("photo", fileInput.files[0]);
+            if (selectedFile) {
+                formData.append("photo", selectedFile);
             }
-
             await api.put("/teacher/profile", formData);
 
             setImageKey(Date.now());
@@ -199,6 +198,7 @@ export default function TeacherProfile() {
                         <input
                             type="file"
                             accept="image/*"
+                            onChange={(e) => setSelectedFile(e.target.files[0])}
                             className="hidden"
                         />
 
