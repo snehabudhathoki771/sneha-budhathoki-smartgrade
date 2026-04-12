@@ -131,7 +131,7 @@ export default function TeacherStudents() {
                                         .toUpperCase();
 
                                     const imageUrl = s.photoUrl
-                                        ? encodeURI(`${BASE}${s.photoUrl}`)
+                                        ? encodeURI(`${BASE}${s.photoUrl}?t=${Date.now()}`)
                                         : null;
 
                                     return (

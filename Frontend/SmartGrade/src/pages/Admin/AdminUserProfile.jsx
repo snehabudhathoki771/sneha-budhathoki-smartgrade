@@ -51,7 +51,7 @@ export default function AdminUserProfile() {
     }
 
     const imageUrl = user.photoUrl
-        ? encodeURI(`${BASE_URL}${user.photoUrl}`)
+        ? encodeURI(`${BASE_URL}${user.photoUrl}?t=${Date.now()}`)
         : null;
 
     const initials = (user.fullName || "U")

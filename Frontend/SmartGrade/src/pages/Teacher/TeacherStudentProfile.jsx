@@ -48,7 +48,7 @@ export default function TeacherStudentProfile() {
   } = data || {};
 
   const imageUrl = student.photoUrl
-    ? encodeURI(`${BASE}${student.photoUrl}`)
+    ? encodeURI(`${BASE}${student.photoUrl}?t=${Date.now()}`)
     : null;
 
   const initials = (student.fullName || "U")

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import Select from "react-select";
 import { toast } from "react-toastify";
 import api from "../../services/api";
 
@@ -124,15 +125,15 @@ export default function AssessmentSetup() {
     setLoading(true);
 
     try {
-      
+
       if (editingId) {
-        
+
         await api.put(`/teacher/sections/${editingId}`, {
           name: sectionName.trim(),
           weightage: Number(weightage),
           maxMarks: Number(maxMarks)
         });
-        
+
         toast.success("Section updated successfully");
         setEditingId(null);
 
@@ -198,6 +199,36 @@ export default function AssessmentSetup() {
 
   };
 
+  // OPTIONS
+  const examOptions = exams.map(exam => ({
+    value: exam.id,
+    label: exam.name
+  }));
+
+  const subjectOptions = subjects.map(subject => ({
+    value: subject.id,
+    label: subject.name
+  }));
+
+  // STYLES
+  const customStyles = {
+    control: (base, state) => ({
+      ...base,
+      borderRadius: "12px",
+      borderColor: state.isFocused ? "#10b981" : "#e5e7eb",
+      boxShadow: "none",
+      padding: "2px",
+      "&:hover": {
+        borderColor: "#10b981"
+      }
+    }),
+    menu: (base) => ({
+      ...base,
+      borderRadius: "12px",
+      overflow: "hidden"
+    })
+  };
+
   return (
 
     <div className="px-8 pt-4 pb-8 bg-gray-50 min-h-screen">
@@ -212,31 +243,23 @@ export default function AssessmentSetup() {
         {/* SELECT CARD */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-wrap gap-4 items-center">
 
-          <select
-            value={selectedExam}
-            onChange={(e) => setSelectedExam(e.target.value)}
-            className="border border-gray-200 rounded-xl px-4 py-2.5 w-full md:w-64 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-          >
-            <option value="">Select Exam</option>
-            {exams.map((exam) => (
-              <option key={exam.id} value={exam.id}>
-                {exam.name}
-              </option>
-            ))}
-          </select>
+          <Select
+            options={examOptions}
+            placeholder="Select Exam"
+            value={examOptions.find(opt => opt.value === selectedExam) || null}
+            onChange={(selected) => setSelectedExam(selected?.value || null)}
+            styles={customStyles}
+            className="w-full md:w-64 text-sm"
+          />
 
-          <select
-            value={selectedSubject}
-            onChange={(e) => setSelectedSubject(e.target.value)}
-            className="border border-gray-200 rounded-xl px-4 py-2.5 w-full md:w-64 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-          >
-            <option value="">Select Subject</option>
-            {subjects.map((subject) => (
-              <option key={subject.id} value={subject.id}>
-                {subject.name}
-              </option>
-            ))}
-          </select>
+          <Select
+            options={subjectOptions}
+            placeholder="Select Subject"
+            value={subjectOptions.find(opt => opt.value === selectedSubject) || null}
+            onChange={(selected) => setSelectedSubject(selected?.value || null)}
+            styles={customStyles}
+            className="w-full md:w-64 text-sm"
+          />
 
           <button
             onClick={resetSelection}

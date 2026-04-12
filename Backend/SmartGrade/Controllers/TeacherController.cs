@@ -1238,8 +1238,15 @@ namespace SmartGrade.Controllers
             teacher.FullName = dto.FullName;
             teacher.Phone = dto.Phone;
             teacher.Address = dto.Address;
-            teacher.DateOfBirth = dto.DateOfBirth;
             teacher.Gender = dto.Gender;
+
+            if (!string.IsNullOrWhiteSpace(dto.DateOfBirth))
+            {
+                if (DateTime.TryParse(dto.DateOfBirth, out var parsedDate))
+                {
+                    teacher.DateOfBirth = parsedDate;
+                }
+            }
 
             await _context.SaveChangesAsync();
 

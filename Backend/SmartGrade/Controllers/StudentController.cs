@@ -214,14 +214,19 @@ namespace SmartGrade.Controllers
             if (!string.IsNullOrWhiteSpace(dto.FullName))
                 student.FullName = dto.FullName;
 
-            student.Phone = dto.Phone;
-            student.Address = dto.Address;
-            student.Gender = dto.Gender;
-            student.GuardianName = dto.GuardianName;
-            student.GuardianPhone = dto.GuardianPhone;
+            student.Phone = dto.Phone ?? student.Phone;
+            student.Address = dto.Address ?? student.Address;
+            student.Gender = dto.Gender ?? student.Gender;
+            student.GuardianName = dto.GuardianName ?? student.GuardianName;
+            student.GuardianPhone = dto.GuardianPhone ?? student.GuardianPhone;
 
             if (dto.DateOfBirth.HasValue)
-                student.DateOfBirth = dto.DateOfBirth.Value;
+            {
+                student.DateOfBirth = DateTime.SpecifyKind(
+                    dto.DateOfBirth.Value,
+                    DateTimeKind.Utc
+                );
+            }
 
             // ================= PHOTO UPLOAD =================
 

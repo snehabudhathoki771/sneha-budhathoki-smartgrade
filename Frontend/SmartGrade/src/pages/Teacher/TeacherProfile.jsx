@@ -91,7 +91,7 @@ export default function TeacherProfile() {
 
             showToast("info", "Uploading photo...");
 
-            await api.post(
+            const res = await api.post(
                 "/teacher/profile/photo",
                 formData,
                 {
@@ -100,7 +100,14 @@ export default function TeacherProfile() {
                     }
                 }
             );
-            await fetchProfile();
+
+            setProfile(prev => ({
+                ...prev,
+                photoUrl: res.data.photoUrl
+            }));
+
+            setImageKey(Date.now());
+
             setImageKey(Date.now());
             showToast("success", "Photo uploaded successfully");
 

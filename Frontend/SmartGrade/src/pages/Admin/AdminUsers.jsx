@@ -494,7 +494,7 @@ export default function AdminUsers() {
 
                                                                 {user.photoUrl ? (
                                                                     <img
-                                                                        src={`${import.meta.env.VITE_API_URL}${user.photoUrl}`}
+                                                                        src={`${import.meta.env.VITE_API_URL}${user.photoUrl}?t=${Date.now()}`}
                                                                         alt={user.fullName}
                                                                         className="w-full h-full object-cover"
                                                                         onError={(e) => {
