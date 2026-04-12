@@ -23,7 +23,7 @@ namespace SmartGrade.Services
                 Port = port,
                 EnableSsl = true,
                 Credentials = new NetworkCredential(username, password),
-                Timeout = 20000,
+                Timeout = 5000,
                 DeliveryMethod = SmtpDeliveryMethod.Network,
                 UseDefaultCredentials = false
             };
@@ -78,7 +78,15 @@ namespace SmartGrade.Services
 
                 mail.To.Add(toEmail);
 
-                await smtp.SendMailAsync(mail);
+                var sendTask = smtp.SendMailAsync(mail);
+                var completedTask = await Task.WhenAny(sendTask, Task.Delay(5000));
+
+                if (completedTask != sendTask)
+                {
+                    throw new Exception("SMTP timeout - email sending failed");
+                }
+
+                await sendTask;
 
                 Console.WriteLine($"Email sent successfully to {toEmail}");
             }
@@ -138,7 +146,15 @@ namespace SmartGrade.Services
 
                 mail.To.Add(toEmail);
 
-                await smtp.SendMailAsync(mail);
+                var sendTask = smtp.SendMailAsync(mail);
+                var completedTask = await Task.WhenAny(sendTask, Task.Delay(5000));
+
+                if (completedTask != sendTask)
+                {
+                    throw new Exception("SMTP timeout - email sending failed");
+                }
+
+                await sendTask;
 
                 Console.WriteLine($"Admin reset email sent to {toEmail}");
             }
@@ -214,7 +230,15 @@ namespace SmartGrade.Services
 
                 mail.To.Add(toEmail);
 
-                await smtp.SendMailAsync(mail);
+                var sendTask = smtp.SendMailAsync(mail);
+                var completedTask = await Task.WhenAny(sendTask, Task.Delay(5000));
+
+                if (completedTask != sendTask)
+                {
+                    throw new Exception("SMTP timeout - email sending failed");
+                }
+
+                await sendTask;
 
                 Console.WriteLine($"Deactivation email sent to {toEmail}");
             }

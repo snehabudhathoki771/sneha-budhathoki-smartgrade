@@ -235,33 +235,43 @@ namespace SmartGrade.Controllers
         [HttpPost("forgot-password")]
         public async Task<IActionResult> ForgotPassword(ForgotPasswordDto request)
         {
-            var user = await _context.Users
-                .FirstOrDefaultAsync(u => u.Email.ToLower() == request.Email.ToLower());
-
-            if (user == null)
-                return Ok("If email exists, reset link has been sent.");
-
-            var token = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
-
-            user.ResetToken = token;
-            user.ResetTokenExpiry = DateTime.UtcNow.AddMinutes(30);
-            await _context.SaveChangesAsync();
-
-            var resetLink = $"https://sneha-budhathoki-smartgrade-6xfv5hew2.vercel.app/reset-password?token={token}";
-
             try
             {
+                var user = await _context.Users
+                    .FirstOrDefaultAsync(u => u.Email.ToLower() == request.Email.ToLower());
+
+                if (user == null)
+                    return Ok("If email exists, reset link has been sent.");
+
+                var token = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
+
+                user.ResetToken = token;
+                user.ResetTokenExpiry = DateTime.UtcNow.AddMinutes(30);
+                await _context.SaveChangesAsync();
+
+                var resetLink = $"https://sneha-budhathoki-smartgrade-6xfv5hew2.vercel.app/reset-password?token={token}";
+
+                Console.WriteLine("RESET LINK: " + resetLink);
+                Console.WriteLine("Sending email to: " + user.Email);
+
                 await _emailService.SendResetEmailAsync(user.Email, resetLink);
+
+                Console.WriteLine("Email sent successfully!");
+
+                return Ok("If email exists, reset link has been sent.");
             }
             catch (Exception ex)
             {
-                Console.WriteLine("EMAIL ERROR: " + ex.Message);
+                Console.WriteLine("FULL ERROR: " + ex.ToString());
 
-                // OPTIONAL: keep security behavior
-                return Ok("If email exists, reset link has been sent.");
+                
+                return StatusCode(500, new
+                {
+                    message = "Email sending failed",
+                    error = ex.Message,
+                    details = ex.InnerException?.Message
+                });
             }
-
-            return Ok("If email exists, reset link has been sent.");
         }
 
         // POST: api/Auth/reset-password
