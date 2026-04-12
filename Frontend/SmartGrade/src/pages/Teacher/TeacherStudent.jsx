@@ -130,9 +130,7 @@ export default function TeacherStudents() {
                                         .join("")
                                         .toUpperCase();
 
-                                    const imageUrl = s.photoUrl
-                                        ? encodeURI(`${BASE}${s.photoUrl}?t=${Date.now()}`)
-                                        : null;
+                                    const imageUrl = `${BASE}/teacher/profile-image/${s.id}`;
 
                                     return (
 
@@ -147,24 +145,12 @@ export default function TeacherStudents() {
 
                                                 <div className="flex items-center gap-3">
 
-                                                    {imageUrl ? (
-
-                                                        <img
-                                                            src={imageUrl}
-                                                            alt={s.fullName}
-                                                            className="w-10 h-10 rounded-full object-cover border border-gray-200"
-                                                            onError={(e) => {
-                                                                e.target.src = "/default-avatar.png";
-                                                            }}
-                                                        />
-
-                                                    ) : (
-
-                                                        <div className="w-10 h-10 rounded-full bg-green-600 text-white flex items-center justify-center text-sm font-semibold shadow-sm">
-                                                            {initials}
-                                                        </div>
-                                                    )}
-
+                                                    <img
+                                                        src={imageUrl}
+                                                        alt={s.fullName}
+                                                        className="w-10 h-10 rounded-full object-cover border border-gray-200"
+                                                    />
+                                                    
                                                     <div className="font-medium text-gray-800">
                                                         {s.fullName}
                                                     </div>

@@ -44,6 +44,12 @@ namespace SmartGrade.Models
         [Column("photourl")]
         public string? PhotoUrl { get; set; }
 
+        [Column("profile_image")]
+        public byte[]? ProfileImage { get; set; }
+
+        [Column("profile_image_content_type")]
+        public string? ProfileImageContentType { get; set; }
+
         [Column("phone")]
         public string? Phone { get; set; }
 

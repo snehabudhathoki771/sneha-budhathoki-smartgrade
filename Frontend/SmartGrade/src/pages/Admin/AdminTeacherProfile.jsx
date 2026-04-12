@@ -82,11 +82,8 @@ export default function AdminTeacherProfile() {
             </div>
         );
     }
-    
-    const imageUrl = teacher.photoUrl
-        ? `${BASE_URL}${teacher.photoUrl}`
-        : null;
 
+    const imageUrl = `${BASE_URL}/teacher/profile-image/${teacher.id}`;
     return (
 
         <div className="space-y-6">
@@ -114,22 +111,11 @@ export default function AdminTeacherProfile() {
                 {/* TOP */}
                 <div className="flex items-center gap-6 p-6 border-b border-gray-100">
 
-                    {imageUrl ? (
-                        <img
-                            src={imageUrl}
-                            alt="Teacher"
-                            className="w-20 h-20 rounded-full object-cover border"
-                            onError={(e) => {
-                                e.target.onerror = null;
-                                e.target.src = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
-                            }}
-                        />
-                    ) : (
-                        <div className="w-20 h-20 rounded-full bg-gray-200 flex items-center justify-center text-gray-500">
-                            ?
-                        </div>
-                    )}
-
+                    <img
+                        src={imageUrl}
+                        alt="Teacher"
+                        className="w-20 h-20 rounded-full object-cover border"
+                    />
                     <div>
 
                         <h2 className="text-lg font-semibold text-gray-800">

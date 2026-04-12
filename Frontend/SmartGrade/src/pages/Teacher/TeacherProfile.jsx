@@ -15,6 +15,7 @@ export default function TeacherProfile() {
     }, [navigate]);
 
     const [profile, setProfile] = useState({
+        id: "",
         fullName: "",
         email: "",
         phone: "",
@@ -25,7 +26,6 @@ export default function TeacherProfile() {
 
     const [loading, setLoading] = useState(true);
     const [updating, setUpdating] = useState(false);
-    const [uploading, setUploading] = useState(false);
     const [imageKey, setImageKey] = useState(Date.now());
 
     // TOAST STATE
@@ -51,10 +51,15 @@ export default function TeacherProfile() {
             const res = await api.get("/teacher/profile");
 
             setProfile({
-                ...res.data,
+                id: res.data.id,
+                fullName: res.data.fullName || "",
+                email: res.data.email || "",
+                phone: res.data.phone || "",
+                address: res.data.address || "",
                 dateOfBirth: res.data.dateOfBirth
                     ? res.data.dateOfBirth.split("T")[0]
-                    : ""
+                    : "",
+                gender: res.data.gender || ""
             });
 
         } catch (err) {
@@ -76,57 +81,12 @@ export default function TeacherProfile() {
         });
     };
 
-    const handlePhotoChange = async (e) => {
-
-        const file = e.target.files[0];
-
-        if (!file) return;
-
-        const formData = new FormData();
-        formData.append("photo", file);
-
-        try {
-
-            setUploading(true);
-
-            showToast("info", "Uploading photo...");
-
-            const res = await api.post(
-                "/teacher/profile/photo",
-                formData,
-                {
-                    headers: {
-                        "Content-Type": "multipart/form-data"
-                    }
-                }
-            );
-
-            setProfile(prev => ({
-                ...prev,
-                photoUrl: res.data.photoUrl
-            }));
-
-            setImageKey(Date.now());
-
-            setImageKey(Date.now());
-            showToast("success", "Photo uploaded successfully");
-
-        } catch {
-
-            showToast("error", "Photo upload failed");
-
-        } finally {
-
-            setUploading(false);
-
-        }
-
-    };
-
     const handleSubmit = async (e) => {
         e.preventDefault();
 
         try {
+            setUpdating(true);
+
             const formData = new FormData();
 
             formData.append("fullName", profile.fullName);
@@ -147,13 +107,22 @@ export default function TeacherProfile() {
                 formData.append("dateOfBirth", profile.dateOfBirth);
             }
 
+            const fileInput = document.querySelector('input[type="file"]');
+            if (fileInput && fileInput.files[0]) {
+                formData.append("photo", fileInput.files[0]);
+            }
+
             await api.put("/teacher/profile", formData);
+
+            setImageKey(Date.now());
 
             showToast("success", "Profile updated successfully");
 
         } catch (err) {
             console.error(err);
             showToast("error", "Failed to update profile");
+        } finally {
+            setUpdating(false);
         }
     };
 
@@ -213,12 +182,9 @@ export default function TeacherProfile() {
                     <label className="cursor-pointer relative group">
 
                         <img
-                            src={`${import.meta.env.VITE_API_URL}${profile.photoUrl}?${imageKey}`}
+                            src={`${import.meta.env.VITE_API_URL}/teacher/profile-image/${profile.id}?${imageKey}`}
                             alt="profile"
                             className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg"
-                            onError={(e) => {
-                                e.target.src = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
-                            }}
                         />
 
                         <div className="absolute bottom-1 right-1 w-9 h-9 bg-green-600 rounded-full flex items-center justify-center shadow-lg border-2 border-white group-hover:scale-110 transition">
@@ -233,7 +199,6 @@ export default function TeacherProfile() {
                         <input
                             type="file"
                             accept="image/*"
-                            onChange={handlePhotoChange}
                             className="hidden"
                         />
 
@@ -252,12 +217,6 @@ export default function TeacherProfile() {
                         <p className="text-xs text-gray-400 mt-1">
                             Upload photo or update your details
                         </p>
-
-                        {uploading && (
-                            <p className="text-xs text-green-600 mt-1 font-medium">
-                                Uploading...
-                            </p>
-                        )}
 
                     </div>
 
@@ -341,5 +300,4 @@ export default function TeacherProfile() {
         </div>
 
     );
-
 }

@@ -47,9 +47,7 @@ export default function TeacherStudentProfile() {
     consistency = "N/A"
   } = data || {};
 
-  const imageUrl = student.photoUrl
-    ? encodeURI(`${BASE}${student.photoUrl}?t=${Date.now()}`)
-    : null;
+  const imageUrl = `${BASE}/teacher/profile-image/${student.id}`;
 
   const initials = (student.fullName || "U")
     .split(" ")
@@ -126,17 +124,11 @@ export default function TeacherStudentProfile() {
 
           <div className="flex items-center gap-4">
 
-            {imageUrl ? (
-              <img
-                src={imageUrl}
-                alt="student"
-                className="w-14 h-14 rounded-full object-cover border-2 border-white"
-              />
-            ) : (
-              <div className="w-14 h-14 rounded-full bg-white text-green-600 flex items-center justify-center font-semibold">
-                {initials}
-              </div>
-            )}
+            <img
+              src={imageUrl}
+              alt="student"
+              className="w-14 h-14 rounded-full object-cover border-2 border-white"
+            />
 
             <div>
               <p className="text-lg font-semibold">{student.fullName}</p>

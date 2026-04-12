@@ -492,27 +492,11 @@ export default function AdminUsers() {
 
                                                             <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center">
 
-                                                                {user.photoUrl ? (
-                                                                    <img
-                                                                        src={`${import.meta.env.VITE_API_URL}${user.photoUrl}?t=${Date.now()}`}
-                                                                        alt={user.fullName}
-                                                                        className="w-full h-full object-cover"
-                                                                        onError={(e) => {
-                                                                            e.target.onerror = null;
-                                                                            e.target.src = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
-                                                                        }}
-                                                                    />
-                                                                ) : (
-                                                                    <div
-                                                                        className={`w-full h-full ${avatarColor(user.fullName || "U")} text-white flex items-center justify-center text-sm font-semibold`}
-                                                                    >
-                                                                        {(user.fullName || "U")
-                                                                            .split(" ")
-                                                                            .map(n => n?.[0] || "")
-                                                                            .join("")
-                                                                            .toUpperCase()}
-                                                                    </div>
-                                                                )}
+                                                                <img
+                                                                    src={`${import.meta.env.VITE_API_URL}/student/profile-image/${user.id}?t=${Date.now()}`}
+                                                                    alt={user.fullName}
+                                                                    className="w-full h-full object-cover"
+                                                                />
 
                                                             </div>
 

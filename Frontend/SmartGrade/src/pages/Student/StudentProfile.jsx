@@ -11,6 +11,7 @@ import {
 
 export default function StudentProfile() {
   const [profile, setProfile] = useState({
+    id: "",
     fullName: "",
     email: "",
     phone: "",
@@ -46,6 +47,7 @@ export default function StudentProfile() {
       const res = await api.get("/student/profile");
 
       setProfile({
+        id: res.data.id,
         fullName: res.data.fullName || "",
         email: res.data.email || "",
         phone: res.data.phone || "",
@@ -155,9 +157,13 @@ export default function StudentProfile() {
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="flex items-center gap-5">
             <div className="relative w-24 h-24">
-              {profile.photoUrl || photo ? (
+              {photo || profile.photoUrl ? (
                 <img
-                  src={photo ? URL.createObjectURL(photo) : `${BASE}${profile.photoUrl}`}
+                  src={
+                    photo
+                      ? URL.createObjectURL(photo)
+                      : `${BASE}/student/profile-image/${profile.id}`
+                  }
                   alt="profile"
                   className="w-24 h-24 rounded-full object-cover border border-slate-200"
                 />

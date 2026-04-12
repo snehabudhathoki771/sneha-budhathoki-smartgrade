@@ -50,9 +50,7 @@ export default function AdminUserProfile() {
         );
     }
 
-    const imageUrl = user.photoUrl
-        ? encodeURI(`${BASE_URL}${user.photoUrl}?t=${Date.now()}`)
-        : null;
+    const imageUrl = `${BASE_URL}/student/profile-image/${user.id}`;
 
     const initials = (user.fullName || "U")
         .split(" ")
@@ -90,25 +88,11 @@ export default function AdminUserProfile() {
                     {/* IMAGE */}
                     <div>
 
-                        {imageUrl ? (
-
-                            <img
-                                src={imageUrl}
-                                alt="user"
-                                className="w-20 h-20 rounded-full object-cover border"
-                                onError={(e) => {
-                                    e.target.onerror = null;
-                                    e.target.src = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
-                                }}
-                            />
-
-                        ) : (
-
-                            <div className="w-20 h-20 rounded-full bg-emerald-500 text-white flex items-center justify-center text-lg font-semibold">
-                                {initials}
-                            </div>
-
-                        )}
+                        <img
+                            src={imageUrl}
+                            alt="user"
+                            className="w-20 h-20 rounded-full object-cover border"
+                        />
 
                     </div>
 
