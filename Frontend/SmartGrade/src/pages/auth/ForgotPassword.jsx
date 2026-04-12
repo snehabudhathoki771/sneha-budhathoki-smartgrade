@@ -20,22 +20,23 @@ export default function ForgotPassword() {
     try {
       setLoading(true);
 
-      await api.post("/Auth/forgot-password", {
+      await api.post("/api/Auth/forgot-password", {
         email: email,
       });
 
+       // Show success message
       setMessage(
-        "If the email exists, a password reset link has been generated."
+        "If the email exists, a password reset link has been sent."
       );
+
       setEmail("");
     } catch (err) {
-      const message =
-        err.response?.data?.message ||
-        err.response?.data ||
-        err.message ||
-        "Something went wrong. Please try again.";
+      console.error("Forgot password error:", err);
 
-      setError(message);
+      
+      setMessage(
+        "If the email exists, a password reset link has been sent."
+      );
     } finally {
       setLoading(false);
     }

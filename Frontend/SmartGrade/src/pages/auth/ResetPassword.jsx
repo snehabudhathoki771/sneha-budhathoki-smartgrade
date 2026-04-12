@@ -6,7 +6,8 @@ export default function ResetPassword() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  const token = searchParams.get("token"); // read token from URL
+  const token = searchParams.get("token");
+
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [message, setMessage] = useState("");
@@ -36,19 +37,23 @@ export default function ResetPassword() {
     try {
       setLoading(true);
 
-      await api.post("/Auth/reset-password", {
+      await api.post("/api/Auth/reset-password", {
         token: token,
         newPassword: newPassword,
       });
 
       setMessage("Password reset successful. Redirecting to login...");
-      setTimeout(() => navigate("/login"), 2000);
+      
+      setTimeout(() => {
+        navigate("/login");
+      }, 2000);
+
     } catch (err) {
+      console.error("Reset password error:", err);
+
       const message =
-        err.response?.data?.message ||
         err.response?.data ||
-        err.message ||
-        "Reset failed. Token may be expired.";
+        "Reset failed. Token may be expired or invalid.";
 
       setError(message);
     } finally {

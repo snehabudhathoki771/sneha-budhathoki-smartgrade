@@ -32,8 +32,8 @@ namespace SmartGrade.Services
 
                 var body = new
                 {
-                    from = "onboarding@resend.dev>",
-                    to = new[] { toEmail },
+                    from = "Resend <onboarding@resend.dev>",
+                    to = new[] { "snehabudhathoki78@gmail.com" }, // DEMO: force your email
                     subject = "SmartGrade – Password Reset",
                     html = $@"
                     <p>Hello,</p>
@@ -57,7 +57,12 @@ namespace SmartGrade.Services
                     body
                 );
 
-                response.EnsureSuccessStatusCode();
+                if (!response.IsSuccessStatusCode)
+                {
+                    var error = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine("RESEND ERROR: " + error);
+                    throw new Exception("Email sending failed: " + error);
+                }
 
                 Console.WriteLine($"Email sent successfully to {toEmail}");
             }
@@ -80,9 +85,9 @@ namespace SmartGrade.Services
                     new AuthenticationHeaderValue("Bearer", apiKey);
 
                 var body = new
-                {   
-                    from = "onboarding@resend.dev>",
-                    to = new[] { toEmail },
+                {
+                    from = "Resend <onboarding@resend.dev>",
+                    to = new[] { "snehabudhathoki78@gmail.com" }, // DEMO
                     subject = "SmartGrade – Your Password Has Been Reset",
                     html = $@"
                     <p>Hello {fullName},</p>
@@ -104,7 +109,12 @@ namespace SmartGrade.Services
                     body
                 );
 
-                response.EnsureSuccessStatusCode();
+                if (!response.IsSuccessStatusCode)
+                {
+                    var error = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine("RESEND ERROR: " + error);
+                    throw new Exception("Email sending failed: " + error);
+                }
 
                 Console.WriteLine($"Admin reset email sent to {toEmail}");
             }
@@ -156,8 +166,8 @@ namespace SmartGrade.Services
 
                 var body = new
                 {
-                    from = "onboarding@resend.dev",
-                    to = new[] { toEmail },
+                    from = "Resend <onboarding@resend.dev>",
+                    to = new[] { "snehabudhathoki78@gmail.com" }, // DEMO
                     subject = "SmartGrade – Account Deactivated",
                     html = message
                 };
@@ -167,7 +177,12 @@ namespace SmartGrade.Services
                     body
                 );
 
-                response.EnsureSuccessStatusCode();
+                if (!response.IsSuccessStatusCode)
+                {
+                    var error = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine("RESEND ERROR: " + error);
+                    throw new Exception("Email sending failed: " + error);
+                }
 
                 Console.WriteLine($"Deactivation email sent to {toEmail}");
             }
