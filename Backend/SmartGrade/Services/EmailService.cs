@@ -1,92 +1,63 @@
-﻿using System.Net;
-using System.Net.Mail;
+﻿using System.Net.Http.Headers;
+using System.Net.Http.Json;
 
 namespace SmartGrade.Services
 {
     public class EmailService
     {
         private readonly IConfiguration _config;
+        private readonly HttpClient _http;
 
         public EmailService(IConfiguration config)
         {
             _config = config;
+            _http = new HttpClient();
         }
 
-        private SmtpClient CreateSmtpClient(string smtpServer, int port, string username, string password)
+        private string GetApiKey()
         {
-            System.Net.ServicePointManager.SecurityProtocol =
-                System.Net.SecurityProtocolType.Tls12;
-
-            return new SmtpClient
-            {
-                Host = smtpServer,
-                Port = port,
-                EnableSsl = true,
-                Credentials = new NetworkCredential(username, password),
-                Timeout = 5000,
-                DeliveryMethod = SmtpDeliveryMethod.Network,
-                UseDefaultCredentials = false
-            };
+            return _config["RESEND_API_KEY"]
+                ?? throw new Exception("Resend API key not configured");
         }
 
         public async Task SendResetEmailAsync(string toEmail, string resetLink)
         {
             try
             {
-                var smtpServer = _config["EmailSettings:SmtpServer"]
-                    ?? throw new Exception("SMTP server not configured");
+                var apiKey = GetApiKey();
 
-                var portValue = _config["EmailSettings:Port"]
-                    ?? throw new Exception("SMTP port not configured");
+                _http.DefaultRequestHeaders.Clear();
+                _http.DefaultRequestHeaders.Authorization =
+                    new AuthenticationHeaderValue("Bearer", apiKey);
 
-                if (!int.TryParse(portValue, out int port))
-                    throw new Exception("Invalid SMTP port configuration");
-
-                var username = _config["EmailSettings:Username"]
-                    ?? throw new Exception("SMTP username not configured");
-
-                var password = _config["EmailSettings:Password"]
-                    ?? throw new Exception("SMTP password not configured");
-
-                var senderEmail = _config["EmailSettings:SenderEmail"]
-                    ?? throw new Exception("Sender email not configured");
-
-                var senderName = _config["EmailSettings:SenderName"] ?? "SmartGrade";
-
-                using var smtp = CreateSmtpClient(smtpServer, port, username, password);
-
-                using var mail = new MailMessage
+                var body = new
                 {
-                    From = new MailAddress(senderEmail, senderName),
-                    Subject = "SmartGrade – Password Reset",
-                    Body = $@"
-                    Hello,
+                    from = "onboarding@resend.dev>",
+                    to = new[] { toEmail },
+                    subject = "SmartGrade – Password Reset",
+                    html = $@"
+                    <p>Hello,</p>
 
-                    You requested a password reset for your SmartGrade account.
+                    <p>You requested a password reset for your SmartGrade account.</p>
 
-                    Click the link below to reset your password:
-                    {resetLink}
+                    <p>Click the link below to reset your password:</p>
 
-                    This link will expire in 30 minutes.
+                    <a href='{resetLink}'>Reset Password</a>
 
-                    If you did not request this, please ignore this email.
+                    <p>This link will expire in 30 minutes.</p>
 
-                    – SmartGrade Team
-                    ",
-                    IsBodyHtml = false
+                    <p>If you did not request this, please ignore this email.</p>
+
+                    <p>– SmartGrade Team</p>
+                    "
                 };
 
-                mail.To.Add(toEmail);
+                var response = await _http.PostAsJsonAsync(
+                    "https://api.resend.com/emails",
+                    body
+                );
 
-                var sendTask = smtp.SendMailAsync(mail);
-                var completedTask = await Task.WhenAny(sendTask, Task.Delay(5000));
-
-                if (completedTask != sendTask)
-                {
-                    throw new Exception("SMTP timeout - email sending failed");
-                }
-
-                await sendTask;
+                response.EnsureSuccessStatusCode();
 
                 Console.WriteLine($"Email sent successfully to {toEmail}");
             }
@@ -102,59 +73,38 @@ namespace SmartGrade.Services
         {
             try
             {
-                var smtpServer = _config["EmailSettings:SmtpServer"]
-                    ?? throw new Exception("SMTP server not configured");
+                var apiKey = GetApiKey();
 
-                var portValue = _config["EmailSettings:Port"]
-                    ?? throw new Exception("SMTP port not configured");
+                _http.DefaultRequestHeaders.Clear();
+                _http.DefaultRequestHeaders.Authorization =
+                    new AuthenticationHeaderValue("Bearer", apiKey);
 
-                if (!int.TryParse(portValue, out int port))
-                    throw new Exception("Invalid SMTP port configuration");
+                var body = new
+                {   
+                    from = "onboarding@resend.dev>",
+                    to = new[] { toEmail },
+                    subject = "SmartGrade – Your Password Has Been Reset",
+                    html = $@"
+                    <p>Hello {fullName},</p>
 
-                var username = _config["EmailSettings:Username"]
-                    ?? throw new Exception("SMTP username not configured");
+                    <p>An administrator has reset your SmartGrade account password.</p>
 
-                var password = _config["EmailSettings:Password"]
-                    ?? throw new Exception("SMTP password not configured");
+                    <p>Your new temporary password is:</p>
 
-                var senderEmail = _config["EmailSettings:SenderEmail"]
-                    ?? throw new Exception("Sender email not configured");
+                    <b>{newPassword}</b>
 
-                var senderName = _config["EmailSettings:SenderName"] ?? "SmartGrade";
+                    <p>Please login and change your password immediately.</p>
 
-                using var smtp = CreateSmtpClient(smtpServer, port, username, password);
-
-                using var mail = new MailMessage
-                {
-                    From = new MailAddress(senderEmail, senderName),
-                    Subject = "SmartGrade – Your Password Has Been Reset",
-                    Body = $@"
-                    Hello {fullName},
-
-                    An administrator has reset your SmartGrade account password.
-
-                    Your new temporary password is:
-
-                    {newPassword}
-
-                    Please login and change your password immediately.
-
-                    – SmartGrade Team
-                    ",
-                    IsBodyHtml = false
+                    <p>– SmartGrade Team</p>
+                    "
                 };
 
-                mail.To.Add(toEmail);
+                var response = await _http.PostAsJsonAsync(
+                    "https://api.resend.com/emails",
+                    body
+                );
 
-                var sendTask = smtp.SendMailAsync(mail);
-                var completedTask = await Task.WhenAny(sendTask, Task.Delay(5000));
-
-                if (completedTask != sendTask)
-                {
-                    throw new Exception("SMTP timeout - email sending failed");
-                }
-
-                await sendTask;
+                response.EnsureSuccessStatusCode();
 
                 Console.WriteLine($"Admin reset email sent to {toEmail}");
             }
@@ -169,76 +119,55 @@ namespace SmartGrade.Services
         {
             try
             {
-                var smtpServer = _config["EmailSettings:SmtpServer"]
-                    ?? throw new Exception("SMTP server not configured");
+                var apiKey = GetApiKey();
 
-                var portValue = _config["EmailSettings:Port"]
-                    ?? throw new Exception("SMTP port not configured");
-
-                if (!int.TryParse(portValue, out int port))
-                    throw new Exception("Invalid SMTP port configuration");
-
-                var username = _config["EmailSettings:Username"]
-                    ?? throw new Exception("SMTP username not configured");
-
-                var password = _config["EmailSettings:Password"]
-                    ?? throw new Exception("SMTP password not configured");
-
-                var senderEmail = _config["EmailSettings:SenderEmail"]
-                    ?? throw new Exception("Sender email not configured");
-
-                var senderName = _config["EmailSettings:SenderName"] ?? "SmartGrade";
-
-                using var smtp = CreateSmtpClient(smtpServer, port, username, password);
+                _http.DefaultRequestHeaders.Clear();
+                _http.DefaultRequestHeaders.Authorization =
+                    new AuthenticationHeaderValue("Bearer", apiKey);
 
                 string message;
 
                 if (until.HasValue)
                 {
                     message = $@"
-                    Hello {fullName},
+                    <p>Hello {fullName},</p>
 
-                    Your account has been temporarily deactivated by the administrator.
+                    <p>Your account has been temporarily deactivated by the administrator.</p>
 
-                    Deactivation period until: {until.Value:dd MMM yyyy}
+                    <p>Deactivation period until: {until.Value:dd MMM yyyy}</p>
 
-                    Please contact the admin for assistance.
+                    <p>Please contact the admin for assistance.</p>
 
-                    – SmartGrade Team
+                    <p>– SmartGrade Team</p>
                     ";
                 }
                 else
                 {
                     message = $@"
-                    Hello {fullName},
+                    <p>Hello {fullName},</p>
 
-                    Your account has been permanently deactivated by the administrator.
+                    <p>Your account has been permanently deactivated by the administrator.</p>
 
-                    Please contact the admin for assistance.
+                    <p>Please contact the admin for assistance.</p>
 
-                    – SmartGrade Team
+                    <p>– SmartGrade Team</p>
                     ";
                 }
 
-                using var mail = new MailMessage
+                var body = new
                 {
-                    From = new MailAddress(senderEmail, senderName),
-                    Subject = "SmartGrade – Account Deactivated",
-                    Body = message,
-                    IsBodyHtml = false
+                    from = "onboarding@resend.dev",
+                    to = new[] { toEmail },
+                    subject = "SmartGrade – Account Deactivated",
+                    html = message
                 };
 
-                mail.To.Add(toEmail);
+                var response = await _http.PostAsJsonAsync(
+                    "https://api.resend.com/emails",
+                    body
+                );
 
-                var sendTask = smtp.SendMailAsync(mail);
-                var completedTask = await Task.WhenAny(sendTask, Task.Delay(5000));
-
-                if (completedTask != sendTask)
-                {
-                    throw new Exception("SMTP timeout - email sending failed");
-                }
-
-                await sendTask;
+                response.EnsureSuccessStatusCode();
 
                 Console.WriteLine($"Deactivation email sent to {toEmail}");
             }
