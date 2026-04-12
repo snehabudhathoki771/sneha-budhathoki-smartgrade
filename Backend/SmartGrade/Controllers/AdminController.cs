@@ -863,11 +863,18 @@ namespace SmartGrade.Controllers
 
             await _context.SaveChangesAsync();
 
-            _emailService.SendAdminResetPasswordEmail(
-                user.Email,
-                user.FullName,
-                dto.NewPassword
-            );
+            try
+            {
+                await _emailService.SendAdminResetPasswordEmailAsync(
+                    user.Email,
+                    user.FullName,
+                    dto.NewPassword
+                );
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("EMAIL ERROR: " + ex.Message);
+            }
 
             await LogAction("Password Reset", $"Admin reset password for {user.Email}");
             await NotifyAllAdmins(
@@ -948,11 +955,19 @@ namespace SmartGrade.Controllers
 
             await _context.SaveChangesAsync();
 
-            _emailService.SendAccountDeactivatedEmail(
-                user.Email,
-                user.FullName,
-                user.DeactivatedUntil
-            );
+            try
+            {
+                await _emailService.SendAccountDeactivatedEmailAsync(
+                    user.Email,
+                    user.FullName,
+                    user.DeactivatedUntil
+                );
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("EMAIL ERROR: " + ex.Message);
+            }
+
 
             // existing notification
             await _notificationService.CreateAsync(

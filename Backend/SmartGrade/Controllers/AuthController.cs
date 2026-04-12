@@ -231,9 +231,7 @@ namespace SmartGrade.Controllers
             return Ok(new { token = jwtToken });
         }
 
-       
-        // POST: api/Auth/forgot-password
-        
+
         [HttpPost("forgot-password")]
         public async Task<IActionResult> ForgotPassword(ForgotPasswordDto request)
         {
@@ -251,14 +249,23 @@ namespace SmartGrade.Controllers
 
             var resetLink = $"https://sneha-budhathoki-smartgrade-6xfv5hew2.vercel.app/reset-password?token={token}";
 
-            _emailService.SendResetEmail(user.Email, resetLink);
+            try
+            {
+                await _emailService.SendResetEmailAsync(user.Email, resetLink);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("EMAIL ERROR: " + ex.Message);
+
+                // OPTIONAL: keep security behavior
+                return Ok("If email exists, reset link has been sent.");
+            }
 
             return Ok("If email exists, reset link has been sent.");
         }
 
- 
         // POST: api/Auth/reset-password
-        
+
         [HttpPost("reset-password")]
         public async Task<IActionResult> ResetPassword(ResetPasswordDto request)
         {
