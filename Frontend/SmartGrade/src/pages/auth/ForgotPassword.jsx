@@ -20,7 +20,7 @@ export default function ForgotPassword() {
     try {
       setLoading(true);
 
-      await api.post("/api/Auth/forgot-password", {
+      await api.post("/Auth/forgot-password", {
         email: email,
       });
 
