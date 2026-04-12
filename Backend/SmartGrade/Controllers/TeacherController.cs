@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using QuestPDF.Fluent;
+using QuestPDF.Helpers;
 using SmartGrade.Data;
 using SmartGrade.DTOs.AssessmentSection;
 using SmartGrade.DTOs.Exam;
@@ -11,8 +12,8 @@ using SmartGrade.Models;
 using SmartGrade.Services;
 using System;
 using System.Diagnostics;
+using System.Globalization;
 using System.Security.Claims;
-using QuestPDF.Helpers;
 
 
 namespace SmartGrade.Controllers
@@ -728,7 +729,9 @@ namespace SmartGrade.Controllers
                     u.Email,
                     u.Phone,
                     u.Address,
-                    u.DateOfBirth,
+                    DateOfBirth = u.DateOfBirth.HasValue
+                        ? u.DateOfBirth.Value.ToString("yyyy-MM-dd")
+                        : null,
                     u.Gender,
                     u.GuardianName,
                     u.GuardianPhone,
@@ -1205,7 +1208,9 @@ namespace SmartGrade.Controllers
                     u.Email,
                     u.Phone,
                     u.Address,
-                    u.DateOfBirth,
+                    DateOfBirth = u.DateOfBirth.HasValue
+                        ? u.DateOfBirth.Value.ToString("yyyy-MM-dd")
+                        : null,
                     u.Gender,
                     u.PhotoUrl
                 })
@@ -1221,11 +1226,11 @@ namespace SmartGrade.Controllers
         [Consumes("multipart/form-data")]
         public async Task<IActionResult> UpdateTeacherProfile([FromForm] UpdateTeacherProfileDto dto)
         {
-            Console.WriteLine(dto.FullName);
-            Console.WriteLine(dto.Phone);
-            Console.WriteLine(dto.Address);
-            Console.WriteLine(dto.DateOfBirth);
-            Console.WriteLine(dto.Gender);
+            Console.WriteLine("FullName: " + dto.FullName);
+            Console.WriteLine("Phone: " + dto.Phone);
+            Console.WriteLine("Address: " + dto.Address);
+            Console.WriteLine("RAW DOB: '" + dto.DateOfBirth + "'");
+            Console.WriteLine("Gender: " + dto.Gender);
 
             var teacherId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
@@ -1235,19 +1240,30 @@ namespace SmartGrade.Controllers
             if (teacher == null)
                 return NotFound("Teacher not found.");
 
+            // ================= UPDATE FIELDS =================
             teacher.FullName = dto.FullName;
-            teacher.Phone = dto.Phone;
-            teacher.Address = dto.Address;
-            teacher.Gender = dto.Gender;
+            teacher.Phone = dto.Phone ?? teacher.Phone;
+            teacher.Address = dto.Address ?? teacher.Address;
+            teacher.Gender = dto.Gender ?? teacher.Gender;
 
+            // ================= FIXED DOB HANDLING =================
             if (!string.IsNullOrWhiteSpace(dto.DateOfBirth))
             {
-                if (DateTime.TryParse(dto.DateOfBirth, out var parsedDate))
+                try
                 {
-                    teacher.DateOfBirth = parsedDate;
+                    var cleanDate = dto.DateOfBirth.Trim(); // remove hidden spaces/newlines
+                    teacher.DateOfBirth = DateTime.Parse(cleanDate);
+
+                    Console.WriteLine("PARSED DOB: " + teacher.DateOfBirth);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("DATE PARSE ERROR: " + ex.Message);
+                    return BadRequest("Invalid date format");
                 }
             }
 
+            // ================= SAVE =================
             await _context.SaveChangesAsync();
 
             return Ok("Profile updated successfully.");

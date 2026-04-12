@@ -137,6 +137,7 @@ if (app.Environment.IsDevelopment())
     });
 }
 
+app.UseStaticFiles();
 
 app.UseHttpsRedirection();
 app.UseRouting();
@@ -147,7 +148,6 @@ app.UseCors("AllowReactApp");
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.UseStaticFiles();
 
 app.MapControllers();
 

@@ -162,7 +162,7 @@ namespace SmartGrade.Controllers
                 u.Role,
                 u.IsActive,
                 u.DeactivatedUntil,
-                PhotoUrl = string.IsNullOrEmpty(u.PhotoUrl) ? null : u.PhotoUrl
+                PhotoUrl = u.PhotoUrl
             });
 
             return Ok(result);
@@ -832,7 +832,9 @@ namespace SmartGrade.Controllers
                     u.Email,
                     u.Phone,
                     u.Address,
-                    u.DateOfBirth,
+                    DateOfBirth = u.DateOfBirth.HasValue
+                        ? u.DateOfBirth.Value.ToString("yyyy-MM-dd")
+                        : null,
                     u.Gender,
                     u.GuardianName,
                     u.GuardianPhone,
@@ -890,7 +892,9 @@ namespace SmartGrade.Controllers
                     u.Email,
                     u.Phone,
                     u.Address,
-                    u.DateOfBirth,
+                    DateOfBirth = u.DateOfBirth.HasValue
+                        ? u.DateOfBirth.Value.ToString("yyyy-MM-dd")
+                        : null,
                     u.Gender,
                     u.PhotoUrl
                 })
