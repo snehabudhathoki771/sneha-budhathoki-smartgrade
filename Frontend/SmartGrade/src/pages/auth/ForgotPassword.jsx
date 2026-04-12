@@ -1,7 +1,5 @@
 import { useState } from "react";
 import api from "../../services/api";
-import React, { useEffect } from 'react';
-import { useNavigate } from "react-router-dom";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
@@ -22,7 +20,7 @@ export default function ForgotPassword() {
     try {
       setLoading(true);
 
-      const response = await api.post("/Auth/forgot-password", {
+      await api.post("/Auth/forgot-password", {
         email: email,
       });
 
@@ -31,7 +29,13 @@ export default function ForgotPassword() {
       );
       setEmail("");
     } catch (err) {
-      setError("Something went wrong. Please try again.");
+      const message =
+        err.response?.data?.message ||
+        err.response?.data ||
+        err.message ||
+        "Something went wrong. Please try again.";
+
+      setError(message);
     } finally {
       setLoading(false);
     }

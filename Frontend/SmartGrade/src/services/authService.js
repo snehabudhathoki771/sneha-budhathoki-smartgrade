@@ -3,7 +3,7 @@ import api from "./api";
 // ================= LOGIN =================
 export const login = async (email, password) => {
   try {
-    const response = await api.post("/auth/login", {
+    const response = await api.post("/Auth/login", {
       email,
       password,
     });
@@ -17,15 +17,20 @@ export const login = async (email, password) => {
 
     return user; // used for navigation
   } catch (error) {
-    console.error("Login error:", error.response?.data || error.message);
-    throw error;
+    const message =
+    error.response?.data?.message ||
+    error.response?.data ||
+    error.message;
+
+  console.error("Login error:", message);
+  throw new Error(message);
   }
 };
 
 // ================= SIGNUP =================
 export const signup = async (data) => {
   try {
-    const response = await api.post("/auth/signup", data);
+    const response = await api.post("/Auth/signup", data);
     return response.data;
   } catch (error) {
     console.error("Signup error:", error.response?.data || error.message);
@@ -47,8 +52,12 @@ export const getRefreshToken = () =>
   localStorage.getItem("refreshToken");
 
 export const getUser = () => {
-  const user = localStorage.getItem("user");
-  return user ? JSON.parse(user) : null;
+  try {
+    const user = localStorage.getItem("user");
+    return user ? JSON.parse(user) : null;
+  } catch {
+    return null;
+  }
 };
 
 export const isAuthenticated = () => !!getToken();

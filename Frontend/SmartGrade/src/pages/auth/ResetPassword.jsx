@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import api from "../../services/api";
-import React, { useEffect } from 'react';
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams();
@@ -12,6 +11,7 @@ export default function ResetPassword() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -34,6 +34,8 @@ export default function ResetPassword() {
     }
 
     try {
+      setLoading(true);
+
       await api.post("/Auth/reset-password", {
         token: token,
         newPassword: newPassword,
@@ -42,9 +44,15 @@ export default function ResetPassword() {
       setMessage("Password reset successful. Redirecting to login...");
       setTimeout(() => navigate("/login"), 2000);
     } catch (err) {
-      setError(
-        err.response?.data || "Reset failed. Token may be expired."
-      );
+      const message =
+        err.response?.data?.message ||
+        err.response?.data ||
+        err.message ||
+        "Reset failed. Token may be expired.";
+
+      setError(message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -88,9 +96,10 @@ export default function ResetPassword() {
 
         <button
           type="submit"
+          disabled={loading}
           className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium transition disabled:opacity-70"
         >
-          Reset Password
+          {loading ? "Please wait..." : "Reset Password"}
         </button>
       </form>
     </div>
