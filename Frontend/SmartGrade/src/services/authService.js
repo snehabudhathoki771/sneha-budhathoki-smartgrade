@@ -16,14 +16,20 @@ export const login = async (email, password) => {
     localStorage.setItem("user", JSON.stringify(user));
 
     return user; // used for navigation
-  } catch (error) {
-    const message =
-    error.response?.data?.message ||
-    error.response?.data ||
-    error.message;
 
-  console.error("Login error:", message);
-  throw new Error(message);
+  } catch (error) {
+
+    if (error.response && error.response.data) {
+      console.error("Login error:", error.response.data);
+      throw error.response.data;
+    }
+
+    // fallback (network or unknown error)
+    console.error("Login error:", error.message);
+
+    throw {
+      message: error.message || "Login failed"
+    };
   }
 };
 

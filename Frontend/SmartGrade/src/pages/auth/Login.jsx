@@ -61,6 +61,9 @@ export default function Login() {
       return;
     }
 
+    // Prevent retry if already inactive
+    if (inactiveMessage) return;
+
     resetInactiveState();
 
     try {
@@ -90,17 +93,19 @@ export default function Login() {
 
     } catch (err) {
 
-      const message = err.response?.data?.message;
-      const remainingSeconds = err.response?.data?.remainingSeconds;
+      const data = err?.response?.data || err;
+
+      const message = data?.message;
+      const remainingSeconds = data?.remainingSeconds;
 
       // Permanent deactivation
       if (message?.toLowerCase().includes("permanently")) {
-        setInactiveMessage("Account permanently deactivated. Contact admin.");
+        setInactiveMessage("Your account has been permanently deactivated. Contact admin.");
       }
 
-      // Temporary deactivation (NEW FIX)
+      // Temporary deactivation
       else if (remainingSeconds) {
-        setInactiveMessage("Account temporarily deactivated.");
+        setInactiveMessage("Your account is temporarily deactivated.");
 
         const target = new Date(Date.now() + remainingSeconds * 1000);
         setTargetDate(target);
@@ -108,16 +113,17 @@ export default function Login() {
 
       // General deactivated fallback
       else if (message?.toLowerCase().includes("deactivated")) {
-        setInactiveMessage("Account inactive");
+        setInactiveMessage(message);
       }
 
       // Invalid credentials
-      else if (err.response?.status === 401) {
+      else if (message?.toLowerCase().includes("invalid")) {
         toast.error("Invalid email or password");
       }
 
+      // Other errors
       else {
-        toast.error("Something went wrong. Try again.");
+        toast.error(message || "Something went wrong. Try again.");
       }
 
     } finally {
@@ -281,7 +287,7 @@ export default function Login() {
           {/* Button */}
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || inactiveMessage}
             className="w-full rounded-xl bg-emerald-500 py-3 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-emerald-600 hover:shadow-md active:scale-[0.98] disabled:opacity-60"
           >
             {loading ? "Signing in..." : "Sign In"}
