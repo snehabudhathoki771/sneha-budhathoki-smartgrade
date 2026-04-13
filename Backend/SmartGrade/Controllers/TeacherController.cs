@@ -1246,100 +1246,59 @@ namespace SmartGrade.Controllers
             teacher.Address = dto.Address ?? teacher.Address;
             teacher.Gender = dto.Gender ?? teacher.Gender;
 
-            // ================= FIXED DOB HANDLING =================
+            // ================= DATE =================
             if (!string.IsNullOrWhiteSpace(dto.DateOfBirth))
             {
                 try
                 {
-                    var cleanDate = dto.DateOfBirth.Trim(); // remove hidden spaces/newlines
+                    var cleanDate = dto.DateOfBirth.Trim();
                     teacher.DateOfBirth = DateTime.Parse(cleanDate);
-
-                    Console.WriteLine("PARSED DOB: " + teacher.DateOfBirth);
                 }
-                catch (Exception ex)
+                catch
                 {
-                    Console.WriteLine("DATE PARSE ERROR: " + ex.Message);
                     return BadRequest("Invalid date format");
                 }
             }
 
-            // ================= SAVE =================
-            await _context.SaveChangesAsync();
-
-            return Ok("Profile updated successfully.");
-        }
-
-
-        [HttpPost("profile/photo")]
-        [Consumes("multipart/form-data")]
-        public async Task<IActionResult> UploadTeacherPhoto(IFormFile photo)
-        {
-            // ===== VALIDATE FILE =====
-            if (photo == null || photo.Length == 0)
-                return BadRequest("No file uploaded.");
-
-            if (!photo.ContentType.StartsWith("image/"))
-                return BadRequest("Only image files are allowed.");
-
-            if (photo.Length > 2 * 1024 * 1024)
-                return BadRequest("File size must be less than 2MB.");
-
-            // ===== GET TEACHER =====
-            var teacherId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-
-            var teacher = await _context.Users.FindAsync(teacherId);
-
-            if (teacher == null)
-                return NotFound("Teacher not found.");
-
-            // ===== CREATE UPLOAD FOLDER =====
-            var uploadFolder = Path.Combine(
-                Directory.GetCurrentDirectory(),
-                "wwwroot",
-                "uploads"
-            );
-
-            if (!Directory.Exists(uploadFolder))
-                Directory.CreateDirectory(uploadFolder);
-
-            // ===== GENERATE FILE NAME =====
-            var fileName = Guid.NewGuid() + Path.GetExtension(photo.FileName);
-            var filePath = Path.Combine(uploadFolder, fileName);
-
-            // ===== SAVE NEW FILE =====
-            using (var stream = new FileStream(filePath, FileMode.Create))
+            // ================= PHOTO (DB STORAGE) =================
+            if (dto.Photo != null && dto.Photo.Length > 0)
             {
-                await photo.CopyToAsync(stream);
+                if (!dto.Photo.ContentType.StartsWith("image/"))
+                    return BadRequest("Only image files are allowed.");
+
+                if (dto.Photo.Length > 2 * 1024 * 1024)
+                    return BadRequest("File size must be less than 2MB.");
+
+                using var memoryStream = new MemoryStream();
+                await dto.Photo.CopyToAsync(memoryStream);
+
+                teacher.ProfileImage = memoryStream.ToArray();
+                teacher.ProfileImageContentType = dto.Photo.ContentType;
+
+                Console.WriteLine("Teacher image stored in DB");
             }
 
-            // ===== DELETE OLD IMAGE =====
-            if (!string.IsNullOrEmpty(teacher.PhotoUrl))
-            {
-                var oldPath = Path.Combine(
-                    Directory.GetCurrentDirectory(),
-                    "wwwroot",
-                    teacher.PhotoUrl.TrimStart('/')
-                );
-
-                if (System.IO.File.Exists(oldPath))
-                {
-                    System.IO.File.Delete(oldPath);
-                }
-            }
-
-            // ===== SAVE NEW URL =====
-            teacher.PhotoUrl = "/uploads/" + fileName;
-
-            // ===== SAVE TO DATABASE =====
             await _context.SaveChangesAsync();
 
-            // ===== RESPONSE =====
             return Ok(new
             {
-                message = "Photo uploaded successfully",
-                photoUrl = teacher.PhotoUrl
+                message = "Profile updated successfully",
+                photoUrl = $"/api/teacher/profile-image/{teacher.Id}"
             });
         }
+
+        [HttpGet("profile-image/{id}")]
+        public async Task<IActionResult> GetProfileImage(int id)
+        {
+            var user = await _context.Users.FindAsync(id);
+
+            if (user == null || user.ProfileImage == null)
+                return NotFound();
+
+            return File(user.ProfileImage, user.ProfileImageContentType ?? "image/jpeg");
+        }
+
+
 
 
         // ================= STUDENT SUBJECT INSIGHTS =================

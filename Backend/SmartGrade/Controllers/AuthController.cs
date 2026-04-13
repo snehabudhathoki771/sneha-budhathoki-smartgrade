@@ -240,9 +240,11 @@ namespace SmartGrade.Controllers
                 var user = await _context.Users
                     .FirstOrDefaultAsync(u => u.Email.ToLower() == request.Email.ToLower());
 
+                // Always return success for security
                 if (user == null)
                     return Ok("If email exists, reset link has been sent.");
 
+                // Generate secure token
                 var token = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
 
                 user.ResetToken = token;
@@ -254,23 +256,26 @@ namespace SmartGrade.Controllers
                 Console.WriteLine("RESET LINK: " + resetLink);
                 Console.WriteLine("Sending email to: " + user.Email);
 
-                await _emailService.SendResetEmailAsync(user.Email, resetLink);
+                try
+                {
+                    await _emailService.SendResetEmailAsync(user.Email, resetLink);
+                    Console.WriteLine("Email sent successfully!");
+                }
+                catch (Exception emailEx)
+                {
+                    // Log email failure but DO NOT break API
+                    Console.WriteLine("EMAIL ERROR: " + emailEx.ToString());
+                }
 
-                Console.WriteLine("Email sent successfully!");
-
+                // Always return success response
                 return Ok("If email exists, reset link has been sent.");
             }
             catch (Exception ex)
             {
                 Console.WriteLine("FULL ERROR: " + ex.ToString());
 
-                
-                return StatusCode(500, new
-                {
-                    message = "Email sending failed",
-                    error = ex.Message,
-                    details = ex.InnerException?.Message
-                });
+                // Do NOT return 500 → avoid frontend failure
+                return Ok("If email exists, reset link has been sent.");
             }
         }
 

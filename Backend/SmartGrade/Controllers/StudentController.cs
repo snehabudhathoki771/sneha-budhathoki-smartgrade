@@ -228,7 +228,7 @@ namespace SmartGrade.Controllers
                 );
             }
 
-            // ================= PHOTO UPLOAD =================
+            // ================= PHOTO (STORE IN DB) =================
 
             if (dto.Photo != null && dto.Photo.Length > 0)
             {
@@ -240,42 +240,13 @@ namespace SmartGrade.Controllers
                 if (dto.Photo.Length > 2 * 1024 * 1024)
                     return BadRequest("File size must be less than 2MB.");
 
-                var uploadFolder = Path.Combine(
-                    Directory.GetCurrentDirectory(),
-                    "wwwroot",
-                    "uploads"
-                );
+                using var memoryStream = new MemoryStream();
+                await dto.Photo.CopyToAsync(memoryStream);
 
-                if (!Directory.Exists(uploadFolder))
-                    Directory.CreateDirectory(uploadFolder);
+                student.ProfileImage = memoryStream.ToArray();
+                student.ProfileImageContentType = dto.Photo.ContentType;
 
-                var fileName = Guid.NewGuid() + Path.GetExtension(dto.Photo.FileName);
-                var filePath = Path.Combine(uploadFolder, fileName);
-
-                // Save new image
-                using (var stream = new FileStream(filePath, FileMode.Create))
-                {
-                    await dto.Photo.CopyToAsync(stream);
-                }
-
-                // Delete old image
-                if (!string.IsNullOrEmpty(student.PhotoUrl))
-                {
-                    var oldPath = Path.Combine(
-                        Directory.GetCurrentDirectory(),
-                        "wwwroot",
-                        student.PhotoUrl.TrimStart('/')
-                    );
-
-                    if (System.IO.File.Exists(oldPath))
-                    {
-                        System.IO.File.Delete(oldPath);
-                    }
-                }
-
-                student.PhotoUrl = "/uploads/" + fileName;
-
-                Console.WriteLine("Saved PhotoUrl: " + student.PhotoUrl);
+                Console.WriteLine("Image stored in DB");
             }
             else
             {
@@ -300,8 +271,19 @@ namespace SmartGrade.Controllers
             return Ok(new
             {
                 message = "Profile updated successfully",
-                photoUrl = student.PhotoUrl
+                photoUrl = $"/api/student/profile-image/{student.Id}"
             });
+        }
+
+        [HttpGet("profile-image/{id}")]
+        public async Task<IActionResult> GetProfileImage(int id)
+        {
+            var user = await _context.Users.FindAsync(id);
+
+            if (user == null || user.ProfileImage == null)
+                return NotFound();
+
+            return File(user.ProfileImage, user.ProfileImageContentType ?? "image/jpeg");
         }
     }
 }
