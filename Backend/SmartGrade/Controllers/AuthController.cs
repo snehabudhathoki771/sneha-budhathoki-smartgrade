@@ -91,22 +91,24 @@ namespace SmartGrade.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login(LoginDto request)
         {
-            // validate request
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
-
-            var email = request.Email.ToLower();
-
-            // find user
-            var user = await _context.Users
-                .FirstOrDefaultAsync(u => u.Email.ToLower() == email);
-
-            if (user == null)
-                return Unauthorized(new { message = "Invalid email or password." });
-
-            // verify password
-            if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
+            try
             {
+                // validate request
+                if (!ModelState.IsValid)
+                    return BadRequest(ModelState);
+
+                var email = request.Email.ToLower();
+
+                // find user
+                var user = await _context.Users
+                    .FirstOrDefaultAsync(u => u.Email.ToLower() == email);
+
+                if (user == null)
+                    return Unauthorized(new { message = "Invalid email or password." });
+
+                // ================= FIXED ORDER =================
+
+                // check if admin changed password
                 if (user.PasswordChangedByAdmin)
                 {
                     return Unauthorized(new
@@ -115,92 +117,108 @@ namespace SmartGrade.Controllers
                     });
                 }
 
-                return Unauthorized(new
+                // verify password safely
+                if (string.IsNullOrEmpty(user.PasswordHash) ||
+                    !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
                 {
-                    message = "Invalid email or password."
-                });
-            }
-
-            // auto re-activate
-            if (user.DeactivatedUntil.HasValue && user.DeactivatedUntil < DateTime.UtcNow)
-            {
-                user.IsActive = true;
-                user.DeactivatedUntil = null;
-                await _context.SaveChangesAsync();
-            }
-
-            // block inactive users
-            if (!user.IsActive)
-            {
-                // TEMPORARY DEACTIVATION
-                if (user.DeactivatedUntil.HasValue)
-                {
-                    var remainingTime = user.DeactivatedUntil.Value - DateTime.UtcNow;
-
-                    if (remainingTime.TotalSeconds > 0)
+                    return Unauthorized(new
                     {
-                        return StatusCode(403, new
-                        {
-                            message = "Your account is temporarily deactivated.",
-                            remainingSeconds = (int)remainingTime.TotalSeconds
-                        });
-                    }
+                        message = "Invalid email or password."
+                    });
                 }
 
-                // PERMANENT DEACTIVATION
-                return StatusCode(403, new
+                // ================= AUTO RE-ACTIVATE =================
+                if (user.DeactivatedUntil.HasValue && user.DeactivatedUntil < DateTime.UtcNow)
                 {
-                    message = "Your account has been permanently deactivated. Contact admin."
+                    user.IsActive = true;
+                    user.DeactivatedUntil = null;
+                    await _context.SaveChangesAsync();
+                }
+
+                // ================= BLOCK INACTIVE USERS =================
+                if (!user.IsActive)
+                {
+                    // TEMPORARY DEACTIVATION
+                    if (user.DeactivatedUntil.HasValue)
+                    {
+                        var remainingTime = user.DeactivatedUntil.Value - DateTime.UtcNow;
+
+                        if (remainingTime.TotalSeconds > 0)
+                        {
+                            return StatusCode(403, new
+                            {
+                                message = "Your account is temporarily deactivated.",
+                                remainingSeconds = (int)remainingTime.TotalSeconds
+                            });
+                        }
+                    }
+
+                    // PERMANENT DEACTIVATION
+                    return StatusCode(403, new
+                    {
+                        message = "Your account has been permanently deactivated. Contact admin."
+                    });
+                }
+
+                // ================= CREATE CLAIMS =================
+                var claims = new List<Claim>
+                {
+                    new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                    new Claim(ClaimTypes.Name, user.Email),
+                    new Claim(ClaimTypes.Email, user.Email),
+                    new Claim(ClaimTypes.Role, user.Role)
+                };
+
+                // ================= JWT CONFIG =================
+                var key = new SymmetricSecurityKey(
+                    Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]!)
+                );
+
+                var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+                var token = new JwtSecurityToken(
+                    issuer: _configuration["Jwt:Issuer"],
+                    audience: _configuration["Jwt:Audience"],
+                    claims: claims,
+                    expires: DateTime.UtcNow.AddMinutes(
+                        Convert.ToDouble(_configuration["Jwt:ExpiryMinutes"])
+                    ),
+                    signingCredentials: creds
+                );
+
+                var jwtToken = new JwtSecurityTokenHandler().WriteToken(token);
+
+                // ================= REFRESH TOKEN =================
+                user.RefreshToken = Guid.NewGuid().ToString();
+                user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7);
+                user.PasswordChangedByAdmin = false;
+
+                await _context.SaveChangesAsync();
+
+                // ================= RESPONSE =================
+                return Ok(new
+                {
+                    token = jwtToken,
+                    refreshToken = user.RefreshToken,
+                    user = new
+                    {
+                        user.Id,
+                        user.FullName,
+                        user.Email,
+                        user.Role
+                    }
                 });
             }
-
-            // create claims
-            var claims = new List<Claim>
+            catch (Exception ex)
             {
-                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                new Claim(ClaimTypes.Name, user.Email),
-                new Claim(ClaimTypes.Email, user.Email),
-                new Claim(ClaimTypes.Role, user.Role)
-            };
+                Console.WriteLine("LOGIN ERROR: " + ex.ToString());
 
-            // jwt config
-            var key = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]!)
-            );
-
-            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-            var token = new JwtSecurityToken(
-                issuer: _configuration["Jwt:Issuer"],
-                audience: _configuration["Jwt:Audience"],
-                claims: claims,
-                expires: DateTime.UtcNow.AddMinutes(
-                    Convert.ToDouble(_configuration["Jwt:ExpiryMinutes"])
-                ),
-                signingCredentials: creds
-            );
-
-            var jwtToken = new JwtSecurityTokenHandler().WriteToken(token);
-
-            // refresh token
-            user.RefreshToken = Guid.NewGuid().ToString();
-            user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7);
-            user.PasswordChangedByAdmin = false;
-            await _context.SaveChangesAsync();
-
-            // response
-            return Ok(new
-            {
-                token = jwtToken,
-                refreshToken = user.RefreshToken,
-                user = new
+                return StatusCode(500, new
                 {
-                    user.Id,
-                    user.FullName,
-                    user.Email,
-                    user.Role
-                }
-            });
+                    message = "Internal server error",
+                    error = ex.Message
+                });
+            }
         }
 
         // POST: api/Auth/refresh-token

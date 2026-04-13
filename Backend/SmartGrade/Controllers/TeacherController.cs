@@ -1221,6 +1221,7 @@ namespace SmartGrade.Controllers
 
             return Ok(teacher);
         }
+        
 
         [HttpPut("profile")]
         [Consumes("multipart/form-data")]
@@ -1240,23 +1241,29 @@ namespace SmartGrade.Controllers
             if (teacher == null)
                 return NotFound("Teacher not found.");
 
-            // ================= UPDATE FIELDS =================
-            teacher.FullName = dto.FullName;
-            teacher.Phone = dto.Phone ?? teacher.Phone;
-            teacher.Address = dto.Address ?? teacher.Address;
-            teacher.Gender = dto.Gender ?? teacher.Gender;
+            // ================= SAFE UPDATE FIELDS =================
+            if (!string.IsNullOrWhiteSpace(dto.FullName))
+                teacher.FullName = dto.FullName;
 
-            // ================= DATE =================
+            if (!string.IsNullOrWhiteSpace(dto.Phone))
+                teacher.Phone = dto.Phone;
+
+            if (!string.IsNullOrWhiteSpace(dto.Address))
+                teacher.Address = dto.Address;
+
+            if (!string.IsNullOrWhiteSpace(dto.Gender))
+                teacher.Gender = dto.Gender;
+
+            // ================= DATE FIX =================
             if (!string.IsNullOrWhiteSpace(dto.DateOfBirth))
             {
-                try
+                if (DateTime.TryParse(dto.DateOfBirth, out var parsedDate))
                 {
-                    var cleanDate = dto.DateOfBirth.Trim();
-                    teacher.DateOfBirth = DateTime.Parse(cleanDate);
+                    teacher.DateOfBirth = parsedDate;
                 }
-                catch
+                else
                 {
-                    return BadRequest("Invalid date format");
+                    return BadRequest("Invalid date format. Use yyyy-MM-dd");
                 }
             }
 
@@ -1286,6 +1293,7 @@ namespace SmartGrade.Controllers
                 photoUrl = $"/api/teacher/profile-image/{teacher.Id}"
             });
         }
+
 
         [HttpGet("profile-image/{id}")]
         public async Task<IActionResult> GetProfileImage(int id)
