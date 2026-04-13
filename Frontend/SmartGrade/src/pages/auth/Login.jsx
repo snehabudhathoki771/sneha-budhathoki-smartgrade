@@ -74,9 +74,12 @@ export default function Login() {
       const backendRole = (user.role || user.Role)?.toLowerCase();
       const selectedRole = role.toLowerCase();
 
+      console.log("Backend role:", backendRole);
+      console.log("Selected role:", selectedRole);
+
+  
       if (backendRole !== selectedRole) {
-        toast.error("You are trying to login from the wrong role panel.");
-        return;
+        toast.warning("Switching to your correct role panel...");
       }
 
       toast.success("Login successful");
