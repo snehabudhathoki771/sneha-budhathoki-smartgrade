@@ -68,6 +68,8 @@ namespace SmartGrade.Models
         [Column("guardian_phone")]
         public string? GuardianPhone { get; set; }
 
-        
+        public bool PasswordChangedByAdmin { get; set; } = false;
+
+
     }
 }

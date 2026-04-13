@@ -106,7 +106,20 @@ namespace SmartGrade.Controllers
 
             // verify password
             if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
-                return Unauthorized(new { message = "Invalid email or password." });
+            {
+                if (user.PasswordChangedByAdmin)
+                {
+                    return Unauthorized(new
+                    {
+                        message = "Password changed by admin"
+                    });
+                }
+
+                return Unauthorized(new
+                {
+                    message = "Invalid email or password."
+                });
+            }
 
             // auto re-activate
             if (user.DeactivatedUntil.HasValue && user.DeactivatedUntil < DateTime.UtcNow)
@@ -172,6 +185,7 @@ namespace SmartGrade.Controllers
             // refresh token
             user.RefreshToken = Guid.NewGuid().ToString();
             user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7);
+            user.PasswordChangedByAdmin = false;
             await _context.SaveChangesAsync();
 
             // response

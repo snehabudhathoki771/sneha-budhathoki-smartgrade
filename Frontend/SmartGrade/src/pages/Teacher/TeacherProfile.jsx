@@ -90,30 +90,41 @@ export default function TeacherProfile() {
 
             const formData = new FormData();
 
-            formData.append("fullName", profile.fullName);
+            formData.append("FullName", profile.fullName);
 
-            if (profile.phone && profile.phone.trim() !== "") {
-                formData.append("phone", profile.phone);
+            if (profile.phone?.trim()) {
+                formData.append("Phone", profile.phone);
             }
 
-            if (profile.address && profile.address.trim() !== "") {
-                formData.append("address", profile.address);
+            if (profile.address?.trim()) {
+                formData.append("Address", profile.address);
             }
 
-            if (profile.gender && profile.gender.trim() !== "") {
-                formData.append("gender", profile.gender);
+            if (profile.gender?.trim()) {
+                formData.append("Gender", profile.gender);
             }
 
             if (profile.dateOfBirth) {
-                formData.append("dateOfBirth", profile.dateOfBirth);
+                const formattedDate = new Date(profile.dateOfBirth)
+                    .toISOString()
+                    .split("T")[0];
+
+                formData.append("DateOfBirth", formattedDate);
             }
 
             if (selectedFile) {
-                formData.append("photo", selectedFile);
+                formData.append("Photo", selectedFile);
             }
-            await api.put("/teacher/profile", formData);
+
+            await api.put("/teacher/profile", formData, {
+                headers: {
+                    "Content-Type": "multipart/form-data",
+                },
+            });
 
             setImageKey(Date.now());
+
+            await fetchProfile();
 
             showToast("success", "Profile updated successfully");
 

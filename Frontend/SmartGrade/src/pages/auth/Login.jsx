@@ -93,37 +93,59 @@ export default function Login() {
 
     } catch (err) {
 
-      const data = err?.response?.data || err;
+      console.log("FULL ERROR:", err);
 
-      const message = data?.message;
-      const remainingSeconds = data?.remainingSeconds;
+      const status = err?.response?.status;
+      const data = err?.response?.data;
 
-      // Permanent deactivation
-      if (message?.toLowerCase().includes("permanently")) {
-        setInactiveMessage("Your account has been permanently deactivated. Contact admin.");
+      const message =
+        data?.message ||
+        data?.Message ||
+        data?.error ||
+        err?.message ||
+        "Something went wrong";
+
+      const remainingSeconds =
+        data?.remainingSeconds ||
+        data?.RemainingSeconds;
+
+
+      if (status === 403) {
+
+        console.log("403 detected:", data);
+
+        if (message?.toLowerCase().includes("permanently")) {
+          setInactiveMessage(
+            "Your account has been permanently deactivated. Contact admin."
+          );
+        }
+
+        else if (remainingSeconds) {
+          setInactiveMessage("Your account is temporarily deactivated.");
+
+          const target = new Date(Date.now() + remainingSeconds * 1000);
+          setTargetDate(target);
+        }
+
+        else {
+          setInactiveMessage(message || "Your account is not allowed to login.");
+        }
       }
 
-      // Temporary deactivation
-      else if (remainingSeconds) {
-        setInactiveMessage("Your account is temporarily deactivated.");
-
-        const target = new Date(Date.now() + remainingSeconds * 1000);
-        setTargetDate(target);
+      else if (message?.toLowerCase().includes("password changed")) {
+        toast.error("Your password was changed by admin. Please check your email.");
       }
 
-      // General deactivated fallback
-      else if (message?.toLowerCase().includes("deactivated")) {
-        setInactiveMessage(message);
-      }
-
-      // Invalid credentials
-      else if (message?.toLowerCase().includes("invalid")) {
+      else if (
+        status === 401 ||
+        message?.toLowerCase().includes("invalid") ||
+        message?.toLowerCase().includes("not found") ||
+        message?.toLowerCase().includes("unauthorized")
+      ) {
         toast.error("Invalid email or password");
       }
-
-      // Other errors
       else {
-        toast.error(message || "Something went wrong. Try again.");
+        toast.error(message);
       }
 
     } finally {

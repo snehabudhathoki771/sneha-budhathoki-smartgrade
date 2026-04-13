@@ -860,6 +860,7 @@ namespace SmartGrade.Controllers
                 return NotFound("User not found.");
 
             user.PasswordHash = HashPassword(dto.NewPassword);
+            user.PasswordChangedByAdmin = true;
 
             await _context.SaveChangesAsync();
 
