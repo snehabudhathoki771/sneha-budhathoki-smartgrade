@@ -83,7 +83,7 @@ export default function AdminTeacherProfile() {
         );
     }
 
-    const imageUrl = `${BASE_URL}/teacher/profile-image/${teacher.id}`;
+    const imageUrl = `${BASE_URL}/api/teacher/profile-image/${teacher.id}`;
     return (
 
         <div className="space-y-6">

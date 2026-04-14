@@ -493,7 +493,7 @@ export default function AdminUsers() {
                                                             <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center">
 
                                                                 <img
-                                                                    src={`${import.meta.env.VITE_API_URL}/student/profile-image/${user.id}?t=${Date.now()}`}
+                                                                    src={`${import.meta.env.VITE_API_URL}/api/student/profile-image/${user.id}`}
                                                                     alt={user.fullName}
                                                                     className="w-full h-full object-cover"
                                                                 />

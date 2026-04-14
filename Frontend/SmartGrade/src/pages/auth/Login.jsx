@@ -61,7 +61,6 @@ export default function Login() {
       return;
     }
 
-    // Prevent retry if already inactive
     if (inactiveMessage) return;
 
     resetInactiveState();
@@ -69,15 +68,31 @@ export default function Login() {
     try {
       setLoading(true);
 
-      const user = await login(email, password);
+      const res = await login(email, password);
 
-      const backendRole = (user.role || user.Role)?.toLowerCase();
+      // ================= STORE TOKEN =================
+      if (res?.token) {
+        localStorage.setItem("token", res.token);
+      }
+
+      // ================= STORE USER =================
+      if (res?.user) {
+        localStorage.setItem("user", JSON.stringify(res.user));
+      }
+
+      const backendRole = (res?.user?.role || res?.user?.Role)?.toLowerCase();
       const selectedRole = role.toLowerCase();
 
       console.log("Backend role:", backendRole);
       console.log("Selected role:", selectedRole);
 
-  
+      // ================= FORCE PASSWORD CHANGE =================
+      if (res?.requirePasswordChange) {
+        toast.warning("Please change your temporary password");
+        navigate("/change-password");
+        return;
+      }
+
       if (backendRole !== selectedRole) {
         toast.warning("Switching to your correct role panel...");
       }
@@ -112,7 +127,6 @@ export default function Login() {
         data?.remainingSeconds ||
         data?.RemainingSeconds;
 
-
       if (status === 403) {
 
         console.log("403 detected:", data);
@@ -133,10 +147,6 @@ export default function Login() {
         else {
           setInactiveMessage(message || "Your account is not allowed to login.");
         }
-      }
-
-      else if (message?.toLowerCase().includes("password changed")) {
-        toast.error("Your password was changed by admin. Please check your email.");
       }
 
       else if (

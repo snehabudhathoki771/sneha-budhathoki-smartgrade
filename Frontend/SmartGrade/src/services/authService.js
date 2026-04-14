@@ -8,15 +8,14 @@ export const login = async (email, password) => {
       password,
     });
 
-    const { token, refreshToken, user } = response.data;
+    const data = response.data;
 
     // Store auth data
-    localStorage.setItem("token", token);
-    localStorage.setItem("refreshToken", refreshToken);
-    localStorage.setItem("user", JSON.stringify(user));
+    localStorage.setItem("token", data.token);
+    localStorage.setItem("refreshToken", data.refreshToken);
+    localStorage.setItem("user", JSON.stringify(data.user));
 
-    return user; // used for navigation
-
+    return data;
   } catch (error) {
 
     if (error.response && error.response.data) {

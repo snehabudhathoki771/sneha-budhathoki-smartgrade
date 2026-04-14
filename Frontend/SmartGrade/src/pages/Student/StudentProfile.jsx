@@ -162,7 +162,7 @@ export default function StudentProfile() {
                   src={
                     photo
                       ? URL.createObjectURL(photo)
-                      : `${BASE}/student/profile-image/${profile.id}`
+                      : `${BASE}/api/student/profile-image/${profile.id}`
                   }
                   alt="profile"
                   className="w-24 h-24 rounded-full object-cover border border-slate-200"

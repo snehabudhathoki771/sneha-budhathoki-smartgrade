@@ -4,6 +4,7 @@ import "react-toastify/dist/ReactToastify.css";
 
 // PUBLIC PAGES
 import LandingPage from "./pages/LandingPage";
+import ChangePassword from "./pages/auth/ChangePassword";
 import ForgotPassword from "./pages/auth/ForgotPassword";
 import Login from "./pages/auth/Login";
 import ResetPassword from "./pages/auth/ResetPassword";
@@ -19,9 +20,9 @@ import Results from "./pages/Teacher/Results";
 import SubjectManagement from "./pages/Teacher/SubjectManagement";
 import TeacherProfile from "./pages/Teacher/TeacherProfile";
 import TeacherStudents from "./pages/Teacher/TeacherStudent";
+import TeacherStudentProfile from "./pages/Teacher/TeacherStudentProfile";
 import TeacherSubjectAnalytics from "./pages/Teacher/TeacherSubjectAnalytics";
 import ToppersAtRisk from "./pages/Teacher/ToppersAtRisk";
-import TeacherStudentProfile from "./pages/Teacher/TeacherStudentProfile";  
 
 // STUDENT PAGES
 import StudentAnalytics from "./pages/Student/StudentAnalytics";
@@ -62,6 +63,7 @@ export default function App() {
         <Route path="/signup" element={<Signup />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/change-password" element={<ChangePassword />} />
 
         {/* TEACHER ROUTES */}
         <Route

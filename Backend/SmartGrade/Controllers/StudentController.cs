@@ -275,6 +275,7 @@ namespace SmartGrade.Controllers
             });
         }
 
+        [AllowAnonymous]
         [HttpGet("profile-image/{id}")]
         public async Task<IActionResult> GetProfileImage(int id)
         {

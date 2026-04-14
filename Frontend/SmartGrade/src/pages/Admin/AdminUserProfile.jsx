@@ -50,7 +50,7 @@ export default function AdminUserProfile() {
         );
     }
 
-    const imageUrl = `${BASE_URL}/student/profile-image/${user.id}`;
+    const imageUrl = `${BASE_URL}/api/student/profile-image/${user.id}`;
 
     const initials = (user.fullName || "U")
         .split(" ")
