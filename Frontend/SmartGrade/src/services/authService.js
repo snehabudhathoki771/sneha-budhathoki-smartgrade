@@ -10,20 +10,30 @@ export const login = async (email, password) => {
 
     const data = response.data;
 
-    // Store auth data
-    localStorage.setItem("token", data.token);
-    localStorage.setItem("refreshToken", data.refreshToken);
-    localStorage.setItem("user", JSON.stringify(data.user));
+    // ================= STORE AUTH DATA =================
+    if (data?.token) {
+      localStorage.setItem("token", data.token);
+    }
 
-    return data;
+    if (data?.refreshToken) {
+      localStorage.setItem("refreshToken", data.refreshToken);
+    }
+
+    if (data?.user) {
+      localStorage.setItem("user", JSON.stringify(data.user));
+    }
+
+    return data; 
+
   } catch (error) {
 
+    // ================= HANDLE API ERROR =================
     if (error.response && error.response.data) {
       console.error("Login error:", error.response.data);
       throw error.response.data;
     }
 
-    // fallback (network or unknown error)
+    // ================= FALLBACK ERROR =================
     console.error("Login error:", error.message);
 
     throw {
