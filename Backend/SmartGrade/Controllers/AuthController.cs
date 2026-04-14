@@ -272,7 +272,7 @@ namespace SmartGrade.Controllers
                 user.ResetTokenExpiry = DateTime.UtcNow.AddMinutes(30);
                 await _context.SaveChangesAsync();
 
-                var resetLink = $"https://sneha-budhathoki-smartgrade-6xfv5hew2.vercel.app/reset-password?token={token}";
+                var resetLink = $"https://sneha-budhathoki-smartgrade-6xfv5hew2.vercel.app/#/reset-password?token={token}";
 
                 Console.WriteLine("RESET LINK: " + resetLink);
                 Console.WriteLine("Sending email to: " + user.Email);
