@@ -848,10 +848,12 @@ namespace SmartGrade.Controllers
             return Ok(student);
         }
 
+
         [HttpPut("users/{id}/reset-password")]
         public async Task<IActionResult> ResetUserPassword(int id, [FromBody] AdminResetPasswordDto dto)
         {
-            if (string.IsNullOrWhiteSpace(dto.NewPassword))
+            // ================= VALIDATION =================
+            if (dto == null || string.IsNullOrWhiteSpace(dto.NewPassword))
                 return BadRequest("Password cannot be empty.");
 
             var user = await _context.Users.FindAsync(id);
@@ -859,11 +861,17 @@ namespace SmartGrade.Controllers
             if (user == null)
                 return NotFound("User not found.");
 
+            // ================= UPDATE PASSWORD =================
             user.PasswordHash = HashPassword(dto.NewPassword);
             user.PasswordChangedByAdmin = true;
 
+            // Optional but good practice → invalidate old sessions
+            user.RefreshToken = null;
+            user.RefreshTokenExpiryTime = null;
+
             await _context.SaveChangesAsync();
 
+            // ================= SEND EMAIL =================
             try
             {
                 await _emailService.SendAdminResetPasswordEmailAsync(
@@ -874,17 +882,24 @@ namespace SmartGrade.Controllers
             }
             catch (Exception ex)
             {
-                Console.WriteLine("EMAIL ERROR: " + ex.Message);
+                Console.WriteLine("EMAIL ERROR: " + ex.ToString());
             }
 
+            // ================= LOGGING =================
             await LogAction("Password Reset", $"Admin reset password for {user.Email}");
+
+            // ================= NOTIFICATIONS =================
             await NotifyAllAdmins(
                 "Password Reset",
                 $"Password reset performed for {user.Email}",
                 "Security"
             );
 
-            return Ok("Password reset successfully and email sent.");
+            // ================= RESPONSE =================
+            return Ok(new
+            {
+                message = "Password reset successfully and email sent."
+            });
         }
 
 

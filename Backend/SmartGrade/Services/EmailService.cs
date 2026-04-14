@@ -1,5 +1,4 @@
-﻿using System.Net.Http.Headers;
-using System.Net.Http.Json;
+﻿using System.Net.Http.Json;
 
 namespace SmartGrade.Services
 {
@@ -14,183 +13,91 @@ namespace SmartGrade.Services
             _http = new HttpClient();
         }
 
-        private string GetApiKey()
+        private string GetApiUrl()
         {
-            return _config["RESEND_API_KEY"]
-                ?? throw new Exception("Resend API key not configured");
+            return _config["EmailApi:Url"]
+                ?? throw new Exception("Email API URL not configured");
         }
 
+        private string GetSecret()
+        {
+            return _config["EmailApi:Secret"]
+                ?? throw new Exception("Email API Secret not configured");
+        }
+
+        private async Task SendEmailAsync(string to, string subject, string body)
+        {
+            var payload = new
+            {
+                to = to,
+                subject = subject,
+                body = body,
+                secret = GetSecret()
+            };
+
+            var response = await _http.PostAsJsonAsync(GetApiUrl(), payload);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                Console.WriteLine("EMAIL ERROR: " + error);
+                throw new Exception("Email sending failed");
+            }
+        }
+
+        // =========================
+        // FORGOT PASSWORD
+        // =========================
         public async Task SendResetEmailAsync(string toEmail, string resetLink)
         {
-            try
-            {
-                var apiKey = GetApiKey();
+            var html = $@"
+                <h2>Reset Your Password</h2>
+                <p>You requested a password reset.</p>
+                <a href='{resetLink}'>Click here to reset password</a>
+                <p>This link expires in 30 minutes.</p>
+            ";
 
-                _http.DefaultRequestHeaders.Clear();
-                _http.DefaultRequestHeaders.Authorization =
-                    new AuthenticationHeaderValue("Bearer", apiKey);
-
-                var body = new
-                {
-                    from = "Resend <onboarding@resend.dev>",
-                    to = new[] { "snehabudhathoki78@gmail.com" }, // DEMO: force your email
-                    subject = "SmartGrade – Password Reset",
-                    html = $@"
-                    <p>Hello,</p>
-
-                    <p>You requested a password reset for your SmartGrade account.</p>
-
-                    <p>Click the link below to reset your password:</p>
-
-                    <a href='{resetLink}'>Reset Password</a>
-
-                    <p>This link will expire in 30 minutes.</p>
-
-                    <p>If you did not request this, please ignore this email.</p>
-
-                    <p>– SmartGrade Team</p>
-                    "
-                };
-
-                var response = await _http.PostAsJsonAsync(
-                    "https://api.resend.com/emails",
-                    body
-                );
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    var error = await response.Content.ReadAsStringAsync();
-                    Console.WriteLine("RESEND ERROR: " + error);
-                    throw new Exception("Email sending failed: " + error);
-                }
-
-                Console.WriteLine($"Email sent successfully to {toEmail}");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("EMAIL ERROR: " + ex.Message);
-                throw;
-            }
+            await SendEmailAsync(toEmail, "SmartGrade – Password Reset", html);
         }
 
-
+        // =========================
+        // ADMIN RESET
+        // =========================
         public async Task SendAdminResetPasswordEmailAsync(string toEmail, string fullName, string newPassword)
         {
-            try
-            {
-                var apiKey = GetApiKey();
+            var html = $@"
+                <p>Hello {fullName},</p>
+                <p>Your password was reset by admin.</p>
+                <p><b>Temporary Password: {newPassword}</b></p>
+                <p>Please change it after login.</p>
+            ";
 
-                _http.DefaultRequestHeaders.Clear();
-                _http.DefaultRequestHeaders.Authorization =
-                    new AuthenticationHeaderValue("Bearer", apiKey);
-
-                var body = new
-                {
-                    from = "Resend <onboarding@resend.dev>",
-                    to = new[] { "snehabudhathoki78@gmail.com" }, // DEMO
-                    subject = "SmartGrade – Your Password Has Been Reset",
-                    html = $@"
-                    <p>Hello {fullName},</p>
-
-                    <p>An administrator has reset your SmartGrade account password.</p>
-
-                    <p>Your new temporary password is:</p>
-
-                    <b>{newPassword}</b>
-
-                    <p>Please login and change your password immediately.</p>
-
-                    <p>– SmartGrade Team</p>
-                    "
-                };
-
-                var response = await _http.PostAsJsonAsync(
-                    "https://api.resend.com/emails",
-                    body
-                );
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    var error = await response.Content.ReadAsStringAsync();
-                    Console.WriteLine("RESEND ERROR: " + error);
-                    throw new Exception("Email sending failed: " + error);
-                }
-
-                Console.WriteLine($"Admin reset email sent to {toEmail}");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("EMAIL ERROR: " + ex.Message);
-                throw;
-            }
+            await SendEmailAsync(toEmail, "SmartGrade – Password Reset by Admin", html);
         }
 
+        // =========================
+        // ACCOUNT DEACTIVATION
+        // =========================
         public async Task SendAccountDeactivatedEmailAsync(string toEmail, string fullName, DateTime? until)
         {
-            try
+            string html;
+
+            if (until.HasValue)
             {
-                var apiKey = GetApiKey();
-
-                _http.DefaultRequestHeaders.Clear();
-                _http.DefaultRequestHeaders.Authorization =
-                    new AuthenticationHeaderValue("Bearer", apiKey);
-
-                string message;
-
-                if (until.HasValue)
-                {
-                    message = $@"
+                html = $@"
                     <p>Hello {fullName},</p>
-
-                    <p>Your account has been temporarily deactivated by the administrator.</p>
-
-                    <p>Deactivation period until: {until.Value:dd MMM yyyy}</p>
-
-                    <p>Please contact the admin for assistance.</p>
-
-                    <p>– SmartGrade Team</p>
-                    ";
-                }
-                else
-                {
-                    message = $@"
-                    <p>Hello {fullName},</p>
-
-                    <p>Your account has been permanently deactivated by the administrator.</p>
-
-                    <p>Please contact the admin for assistance.</p>
-
-                    <p>– SmartGrade Team</p>
-                    ";
-                }
-
-                var body = new
-                {
-                    from = "Resend <onboarding@resend.dev>",
-                    to = new[] { "snehabudhathoki78@gmail.com" }, // DEMO
-                    subject = "SmartGrade – Account Deactivated",
-                    html = message
-                };
-
-                var response = await _http.PostAsJsonAsync(
-                    "https://api.resend.com/emails",
-                    body
-                );
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    var error = await response.Content.ReadAsStringAsync();
-                    Console.WriteLine("RESEND ERROR: " + error);
-                    throw new Exception("Email sending failed: " + error);
-                }
-
-                Console.WriteLine($"Deactivation email sent to {toEmail}");
+                    <p>Your account is temporarily deactivated until {until.Value:dd MMM yyyy}.</p>
+                ";
             }
-            catch (Exception ex)
+            else
             {
-                Console.WriteLine("EMAIL ERROR: " + ex.Message);
-                throw;
+                html = $@"
+                    <p>Hello {fullName},</p>
+                    <p>Your account has been permanently deactivated.</p>
+                ";
             }
+
+            await SendEmailAsync(toEmail, "SmartGrade – Account Deactivated", html);
         }
     }
 }

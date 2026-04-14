@@ -106,17 +106,6 @@ namespace SmartGrade.Controllers
                 if (user == null)
                     return Unauthorized(new { message = "Invalid email or password." });
 
-                // ================= FIXED ORDER =================
-
-                // check if admin changed password
-                if (user.PasswordChangedByAdmin)
-                {
-                    return Unauthorized(new
-                    {
-                        message = "Password changed by admin"
-                    });
-                }
-
                 // verify password safely
                 if (string.IsNullOrEmpty(user.PasswordHash) ||
                     !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
@@ -191,7 +180,6 @@ namespace SmartGrade.Controllers
                 // ================= REFRESH TOKEN =================
                 user.RefreshToken = Guid.NewGuid().ToString();
                 user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7);
-                user.PasswordChangedByAdmin = false;
 
                 await _context.SaveChangesAsync();
 
@@ -200,6 +188,7 @@ namespace SmartGrade.Controllers
                 {
                     token = jwtToken,
                     refreshToken = user.RefreshToken,
+                    requirePasswordChange = user.PasswordChangedByAdmin,
                     user = new
                     {
                         user.Id,
