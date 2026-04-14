@@ -65,6 +65,8 @@ export default function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/change-password" element={<ChangePassword />} />
 
+        <Route path="/check" element={<h1>CHECK WORKING</h1>} />
+
         {/* TEACHER ROUTES */}
         <Route
           path="/teacher"
