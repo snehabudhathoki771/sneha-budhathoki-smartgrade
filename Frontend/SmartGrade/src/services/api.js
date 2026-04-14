@@ -13,7 +13,7 @@ api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("token");
 
-    if (token) {
+    if (!config.url?.toLowerCase().includes("/auth/") && token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
 
@@ -74,7 +74,7 @@ api.interceptors.response.use(
       } catch (refreshError) {
 
         localStorage.clear();
-        window.location.href = "/#/login"; 
+        window.location.href = "/#/login";
 
         return Promise.reject(refreshError);
       }

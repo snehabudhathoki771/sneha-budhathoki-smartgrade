@@ -56,7 +56,7 @@ export default function App() {
   return (
     <>
       <Routes>
-        <Route path="/reset-password/*" element={<ResetPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
 
         {/* PUBLIC ROUTES */}
         <Route path="/" element={<LandingPage />} />
