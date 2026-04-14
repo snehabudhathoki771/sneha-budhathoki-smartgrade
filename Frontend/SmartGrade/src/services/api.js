@@ -37,6 +37,7 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
+    // ❗ Skip auth endpoints (VERY IMPORTANT)
     if (originalRequest.url?.toLowerCase().includes("/auth/")) {
       return Promise.reject(error);
     }
@@ -48,10 +49,10 @@ api.interceptors.response.use(
 
       const refreshToken = localStorage.getItem("refreshToken");
 
-      // No refresh token → logout
+      // ❗ No refresh token → logout (FIXED for HashRouter)
       if (!refreshToken) {
         localStorage.clear();
-        window.location.href = "/login";
+        window.location.href = "/#/login";
         return Promise.reject(error);
       }
 
@@ -73,7 +74,7 @@ api.interceptors.response.use(
       } catch (refreshError) {
 
         localStorage.clear();
-        window.location.href = "/login";
+        window.location.href = "/#/login"; 
 
         return Promise.reject(refreshError);
       }
@@ -82,6 +83,7 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
 
 
 // ================= STUDENT APIs =================

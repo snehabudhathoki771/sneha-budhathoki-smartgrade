@@ -45,7 +45,7 @@ export default function ResetPassword() {
       setMessage("Password reset successful. Redirecting to login...");
       
       setTimeout(() => {
-        navigate("/login");
+        navigate("/login", { replace: true });
       }, 2000);
 
     } catch (err) {

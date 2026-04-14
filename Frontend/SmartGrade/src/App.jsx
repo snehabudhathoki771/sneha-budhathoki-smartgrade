@@ -56,22 +56,14 @@ export default function App() {
   return (
     <>
       <Routes>
-
         <Route path="/reset-password" element={<ResetPassword />} />
 
-        {/* HOME */}
-        <Route path="/" element={<LandingPage />} />
-
         {/* PUBLIC ROUTES */}
+        <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/change-password" element={<ChangePassword />} />
-
-        <Route path="/" element={<LandingPage />} />
-
-        {/* FALLBACK */}
-        <Route path="*" element={<Login />} />
 
         {/* TEACHER ROUTES */}
         <Route
