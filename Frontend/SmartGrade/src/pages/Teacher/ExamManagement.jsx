@@ -53,7 +53,7 @@ export default function ExamManagement() {
 
     try {
       if (editingExamId) {
-        await api.put(`/teacher/exam/${editingExamId}`, form);
+        await api.put(`/teacher/exams/${editingExamId}`, form);
         toast.success("Exam updated");
         setEditingExamId(null);
       } else {

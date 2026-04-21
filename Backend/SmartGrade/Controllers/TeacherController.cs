@@ -67,24 +67,36 @@ namespace SmartGrade.Controllers
         [HttpPost("bulk-upload-preview")]
         [Consumes("multipart/form-data")]
         public async Task<IActionResult> BulkUploadPreview(
-            [FromForm] BulkUploadRequestDto request)
+    [FromForm] BulkUploadRequestDto request)
         {
-            if (request.File == null || request.File.Length == 0)
-                return BadRequest("No file uploaded.");
+            try
+            {
+                if (request.File == null || request.File.Length == 0)
+                    return BadRequest("No file uploaded.");
 
-            var section = await _context.AssessmentSections
-                .Include(s => s.Subject)
-                .FirstOrDefaultAsync(s => s.Id == request.SectionId);
+                // File type check
+                var fileName = request.File.FileName.ToLower();
+                if (!fileName.EndsWith(".csv") && !fileName.EndsWith(".xlsx"))
+                    return BadRequest("Wrong file. Please upload CSV or XLSX format.");
 
-            if (section == null)
-                return BadRequest("Invalid section.");
+                var section = await _context.AssessmentSections
+                    .Include(s => s.Subject)
+                    .FirstOrDefaultAsync(s => s.Id == request.SectionId);
 
-            var parsedRows = await _fileParserService.ParseAsync(request.File);
+                if (section == null)
+                    return BadRequest("Invalid section.");
 
-            var result = await _bulkImportService
-                .ValidateAsync(parsedRows, request.SectionId);
+                var parsedRows = await _fileParserService.ParseAsync(request.File);
 
-            return Ok(result);
+                var result = await _bulkImportService
+                    .ValidateAsync(parsedRows, request.SectionId);
+
+                return Ok(result);
+            }
+            catch (Exception)
+            {
+                return BadRequest("Wrong file or invalid format. Please check your file.");
+            }
         }
 
 
@@ -708,7 +720,9 @@ namespace SmartGrade.Controllers
                     u.Id,
                     u.FullName,
                     u.Email,
-                    u.PhotoUrl
+                    PhotoUrl = u.ProfileImage != null
+                ? $"/api/student/profile-image/{u.Id}"
+                : null
                 })
                 .ToListAsync();
 
@@ -735,7 +749,9 @@ namespace SmartGrade.Controllers
                     u.Gender,
                     u.GuardianName,
                     u.GuardianPhone,
-                    u.PhotoUrl
+                    PhotoUrl = u.ProfileImage != null
+                        ? $"/api/student/profile-image/{u.Id}"
+                        : null
                 })
                 .FirstOrDefaultAsync();
 
@@ -1212,7 +1228,9 @@ namespace SmartGrade.Controllers
                         ? u.DateOfBirth.Value.ToString("yyyy-MM-dd")
                         : null,
                     u.Gender,
-                    u.PhotoUrl
+                    photoUrl = u.ProfileImage != null
+                        ? $"/api/teacher/profile-image/{u.Id}"
+                        : null
                 })
                 .FirstOrDefaultAsync();
 
@@ -1221,80 +1239,112 @@ namespace SmartGrade.Controllers
 
             return Ok(teacher);
         }
-        
+
 
         [HttpPut("profile")]
         [Consumes("multipart/form-data")]
         public async Task<IActionResult> UpdateTeacherProfile([FromForm] UpdateTeacherProfileDto dto)
         {
-            Console.WriteLine("FullName: " + dto.FullName);
-            Console.WriteLine("Phone: " + dto.Phone);
-            Console.WriteLine("Address: " + dto.Address);
-            Console.WriteLine("RAW DOB: '" + dto.DateOfBirth + "'");
-            Console.WriteLine("Gender: " + dto.Gender);
-
-            var teacherId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-
-            var teacher = await _context.Users
-                .FirstOrDefaultAsync(u => u.Id == teacherId && u.Role == "Teacher");
-
-            if (teacher == null)
-                return NotFound("Teacher not found.");
-
-            // ================= SAFE UPDATE FIELDS =================
-            if (!string.IsNullOrWhiteSpace(dto.FullName))
-                teacher.FullName = dto.FullName;
-
-            if (!string.IsNullOrWhiteSpace(dto.Phone))
-                teacher.Phone = dto.Phone;
-
-            if (!string.IsNullOrWhiteSpace(dto.Address))
-                teacher.Address = dto.Address;
-
-            if (!string.IsNullOrWhiteSpace(dto.Gender))
-                teacher.Gender = dto.Gender;
-
-            // ================= DATE FIX =================
-            if (!string.IsNullOrWhiteSpace(dto.DateOfBirth))
+            try
             {
-                if (DateTime.TryParse(dto.DateOfBirth, out var parsedDate))
+                Console.WriteLine("===== UPDATE PROFILE START =====");
+                Console.WriteLine("FullName: " + dto.FullName);
+                Console.WriteLine("Phone: " + dto.Phone);
+                Console.WriteLine("Address: " + dto.Address);
+                Console.WriteLine("RAW DOB: '" + dto.DateOfBirth + "'");
+                Console.WriteLine("Gender: " + dto.Gender);
+
+                var teacherId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+                var teacher = await _context.Users
+                    .FirstOrDefaultAsync(u => u.Id == teacherId && u.Role == "Teacher");
+
+                if (teacher == null)
+                    return NotFound("Teacher not found.");
+
+                // ================= SAFE UPDATE FIELDS =================
+                if (!string.IsNullOrWhiteSpace(dto.FullName))
+                    teacher.FullName = dto.FullName;
+
+                if (!string.IsNullOrWhiteSpace(dto.Phone))
+                    teacher.Phone = dto.Phone;
+
+                if (!string.IsNullOrWhiteSpace(dto.Address))
+                    teacher.Address = dto.Address;
+
+                if (!string.IsNullOrWhiteSpace(dto.Gender))
+                    teacher.Gender = dto.Gender;
+
+                // ================= DATE FIX (ROBUST) =================
+                if (dto.DateOfBirth.HasValue)
                 {
-                    teacher.DateOfBirth = parsedDate;
+                    teacher.DateOfBirth = DateTime.SpecifyKind(
+                        dto.DateOfBirth.Value,
+                        DateTimeKind.Utc
+                    );
                 }
-                else
+
+                // ================= PHOTO (DB STORAGE) =================
+                if (dto.Photo != null && dto.Photo.Length > 0)
                 {
-                    return BadRequest("Invalid date format. Use yyyy-MM-dd");
+                    Console.WriteLine("Processing image...");
+
+                    if (!dto.Photo.ContentType.StartsWith("image/"))
+                        return BadRequest("Only image files are allowed.");
+
+                    if (dto.Photo.Length > 2 * 1024 * 1024)
+                        return BadRequest("File size must be less than 2MB.");
+
+                    using var memoryStream = new MemoryStream();
+                    await dto.Photo.CopyToAsync(memoryStream);
+
+                    teacher.ProfileImage = memoryStream.ToArray();
+                    teacher.ProfileImageContentType = dto.Photo.ContentType;
+
+                    Console.WriteLine("Image stored successfully");
                 }
+
+                try
+                {
+                    Console.WriteLine("Before SaveChanges...");
+                    await _context.SaveChangesAsync();
+                    Console.WriteLine("After SaveChanges...");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("===== SAVE ERROR =====");
+                    Console.WriteLine("ERROR: " + ex.Message);
+
+                    if (ex.InnerException != null)
+                    {
+                        Console.WriteLine("INNER ERROR: " + ex.InnerException.Message);
+                    }
+
+                    throw; 
+                }
+
+                return Ok(new
+                {
+                    message = "Profile updated successfully",
+                    photoUrl = $"/api/teacher/profile-image/{teacher.Id}"
+                });
             }
-
-            // ================= PHOTO (DB STORAGE) =================
-            if (dto.Photo != null && dto.Photo.Length > 0)
+            catch (Exception ex)
             {
-                if (!dto.Photo.ContentType.StartsWith("image/"))
-                    return BadRequest("Only image files are allowed.");
+                Console.WriteLine("===== ERROR OCCURRED =====");
+                Console.WriteLine("ERROR: " + ex.Message);
+                Console.WriteLine("STACK TRACE: " + ex.StackTrace);
 
-                if (dto.Photo.Length > 2 * 1024 * 1024)
-                    return BadRequest("File size must be less than 2MB.");
-
-                using var memoryStream = new MemoryStream();
-                await dto.Photo.CopyToAsync(memoryStream);
-
-                teacher.ProfileImage = memoryStream.ToArray();
-                teacher.ProfileImageContentType = dto.Photo.ContentType;
-
-                Console.WriteLine("Teacher image stored in DB");
+                return StatusCode(500, new
+                {
+                    message = "Internal Server Error",
+                    error = ex.Message
+                });
             }
-
-            await _context.SaveChangesAsync();
-
-            return Ok(new
-            {
-                message = "Profile updated successfully",
-                photoUrl = $"/api/teacher/profile-image/{teacher.Id}"
-            });
         }
 
 
+        [AllowAnonymous]
         [HttpGet("profile-image/{id}")]
         public async Task<IActionResult> GetProfileImage(int id)
         {
@@ -1302,6 +1352,10 @@ namespace SmartGrade.Controllers
 
             if (user == null || user.ProfileImage == null)
                 return NotFound();
+
+            Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+            Response.Headers["Pragma"] = "no-cache";
+            Response.Headers["Expires"] = "0";
 
             return File(user.ProfileImage, user.ProfileImageContentType ?? "image/jpeg");
         }

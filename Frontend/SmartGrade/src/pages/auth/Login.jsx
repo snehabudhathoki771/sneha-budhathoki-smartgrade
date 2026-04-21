@@ -94,7 +94,9 @@ export default function Login() {
       }
 
       if (backendRole !== selectedRole) {
-        toast.warning("Switching to your correct role panel...");
+        toast.error("Invalid role selected. Please choose the correct role.");
+        setLoading(false);
+        return;
       }
 
       toast.success("Login successful");

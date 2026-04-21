@@ -272,7 +272,7 @@ namespace SmartGrade.Controllers
                 user.ResetTokenExpiry = DateTime.UtcNow.AddMinutes(30);
                 await _context.SaveChangesAsync();
 
-                var resetLink = $"https://sneha-budhathoki-smartgrade-6xfv5hew2.vercel.app/#/reset-password?token={token}";
+                var resetLink = $"http://localhost:5173/reset-password?token={token}";
 
                 Console.WriteLine("RESET LINK: " + resetLink);
                 Console.WriteLine("Sending email to: " + user.Email);
@@ -295,7 +295,7 @@ namespace SmartGrade.Controllers
             {
                 Console.WriteLine("FULL ERROR: " + ex.ToString());
 
-                // Do NOT return 500 → avoid frontend failure
+                
                 return Ok("If email exists, reset link has been sent.");
             }
         }
@@ -340,6 +340,26 @@ namespace SmartGrade.Controllers
                 .ToListAsync();
 
             return Ok(users);
+        }
+
+        [Authorize]
+        [HttpPost("change-password")]
+        public async Task<IActionResult> ChangePassword(ChangePasswordDto request)
+        {
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+            var user = await _context.Users.FindAsync(userId);
+
+            if (user == null)
+                return NotFound();
+
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+
+            user.PasswordChangedByAdmin = false;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Password changed successfully" });
         }
     }
 }

@@ -3,6 +3,9 @@ import api from "./api";
 // ================= LOGIN =================
 export const login = async (email, password) => {
   try {
+    console.log("BASE URL:", api.defaults.baseURL);
+    console.log("Calling endpoint:", "/Auth/login");
+
     const response = await api.post("/Auth/login", {
       email,
       password,
@@ -23,14 +26,20 @@ export const login = async (email, password) => {
       localStorage.setItem("user", JSON.stringify(data.user));
     }
 
-    return data; 
+    return data;
 
   } catch (error) {
+
+    console.error("FULL LOGIN ERROR:", error);
 
     // ================= HANDLE API ERROR =================
     if (error.response && error.response.data) {
       console.error("Login error:", error.response.data);
-      throw error.response.data;
+
+      throw {
+        ...error.response.data,
+        status: error.response.status
+      };
     }
 
     // ================= FALLBACK ERROR =================

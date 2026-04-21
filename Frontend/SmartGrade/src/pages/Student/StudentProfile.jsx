@@ -1,13 +1,11 @@
 import { useEffect, useState } from "react";
-import api from "../../services/api";
-import { toast } from "react-toastify";
-import { useNavigate } from "react-router-dom";
 import {
   FaCamera,
-  FaUserCircle,
-  FaShieldAlt,
-  FaCheckCircle
+  FaShieldAlt
 } from "react-icons/fa";
+import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
+import api from "../../services/api";
 
 export default function StudentProfile() {
   const [profile, setProfile] = useState({
@@ -162,7 +160,7 @@ export default function StudentProfile() {
                   src={
                     photo
                       ? URL.createObjectURL(photo)
-                      : `${BASE}/api/student/profile-image/${profile.id}`
+                      : `${BASE}${profile.photoUrl}?t=${Date.now()}`
                   }
                   alt="profile"
                   className="w-24 h-24 rounded-full object-cover border border-slate-200"

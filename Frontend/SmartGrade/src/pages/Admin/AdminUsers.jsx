@@ -250,6 +250,20 @@ export default function AdminUsers() {
 
         }
 
+        const isRoleChanged = editForm.role !== editingUser.role;
+
+        if (!isRoleChanged) {
+            try {
+                await api.put(`/admin/users/${editingUser.id}`, editForm);
+                setEditingUser(null);
+                setMessage("User updated successfully");
+                fetchUsers();
+            } catch (err) {
+                setMessage("Error updating user");
+            }
+            return;
+        }
+
         toast.info(
             <div>
                 <p>Are you sure you want to change this user's role?</p>
@@ -476,6 +490,11 @@ export default function AdminUsers() {
 
                                         {currentUsers.map((user) => {
 
+                                            const imageUrl =
+                                                user.role === "Student"
+                                                    ? `/api/student/profile-image/${user.id}`
+                                                    : `/api/teacher/profile-image/${user.id}`;
+
                                             const initials = (user.fullName || "U")
                                                 .split(" ")
                                                 .map(n => n?.[0] || "")
@@ -493,9 +512,15 @@ export default function AdminUsers() {
                                                             <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center">
 
                                                                 <img
-                                                                    src={`${import.meta.env.VITE_API_URL}/api/student/profile-image/${user.id}`}
+                                                                    src={
+                                                                        `${import.meta.env.VITE_API_URL}${imageUrl}?t=${Date.now()}`
+                                                                    }
                                                                     alt={user.fullName}
                                                                     className="w-full h-full object-cover"
+                                                                    onError={(e) => {
+                                                                        e.target.src =
+                                                                            "https://ui-avatars.com/api/?name=" + user.fullName;
+                                                                    }}
                                                                 />
 
                                                             </div>

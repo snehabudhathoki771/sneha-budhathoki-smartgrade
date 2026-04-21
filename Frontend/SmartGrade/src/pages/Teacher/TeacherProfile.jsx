@@ -21,7 +21,8 @@ export default function TeacherProfile() {
         phone: "",
         dateOfBirth: "",
         gender: "",
-        address: ""
+        address: "",
+        photoUrl: ""
     });
 
     const [loading, setLoading] = useState(true);
@@ -52,20 +53,19 @@ export default function TeacherProfile() {
             const res = await api.get("/teacher/profile");
 
             setProfile({
-                id: res.data.id,
+                id: res.data.id || "",
                 fullName: res.data.fullName || "",
                 email: res.data.email || "",
                 phone: res.data.phone || "",
                 address: res.data.address || "",
-                dateOfBirth: res.data.dateOfBirth
-                    ? res.data.dateOfBirth.split("T")[0]
-                    : "",
-                gender: res.data.gender || ""
+                dateOfBirth: res.data.dateOfBirth || "",
+                gender: res.data.gender || "",
+                photoUrl: res.data.photoUrl || ""
             });
 
         } catch (err) {
 
-            console.error("Failed to load teacher profile");
+            console.error("Failed to load teacher profile", err);
 
         } finally {
 
@@ -73,7 +73,6 @@ export default function TeacherProfile() {
 
         }
     };
-
     const handleChange = (e) => {
 
         setProfile({
@@ -105,12 +104,15 @@ export default function TeacherProfile() {
             }
 
             if (profile.dateOfBirth) {
-                formData.append("dateOfBirth", profile.dateOfBirth);
+                const formattedDate = profile.dateOfBirth.split("T")[0];
+                formData.append("dateOfBirth", formattedDate);
             }
 
             if (selectedFile) {
                 formData.append("photo", selectedFile);
             }
+
+            console.log("Sending DOB:", profile.dateOfBirth);
             await api.put("/teacher/profile", formData);
 
             setImageKey(Date.now());
@@ -124,6 +126,22 @@ export default function TeacherProfile() {
             setUpdating(false);
         }
     };
+
+    const calculateCompletion = () => {
+        const fields = [
+            profile.fullName,
+            profile.phone,
+            profile.address,
+            profile.gender,
+            profile.dateOfBirth,
+            profile.photoUrl || selectedFile
+        ];
+
+        const filled = fields.filter(f => f && f !== "").length;
+        return Math.round((filled / fields.length) * 100);
+    };
+
+    const completion = calculateCompletion();
 
     if (loading) {
 
@@ -180,11 +198,26 @@ export default function TeacherProfile() {
 
                     <label className="cursor-pointer relative group">
 
-                        <img
-                            src={`${import.meta.env.VITE_API_URL}/teacher/profile-image/${profile.id}?${imageKey}`}
-                            alt="profile"
-                            className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg"
-                        />
+                        {profile.id ? (
+                            <img
+                                key={imageKey}
+                                src={
+                                    selectedFile
+                                        ? URL.createObjectURL(selectedFile)
+                                        : profile.photoUrl
+                                            ? `${import.meta.env.VITE_API_URL}${profile.photoUrl}?${imageKey}`
+                                            : "/default-avatar.png"
+                                }
+                                alt="profile"
+                                className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg"
+                            />
+                        ) : (
+                            <img
+                                src="/default-avatar.png"
+                                alt="default"
+                                className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg"
+                            />
+                        )}
 
                         <div className="absolute bottom-1 right-1 w-9 h-9 bg-green-600 rounded-full flex items-center justify-center shadow-lg border-2 border-white group-hover:scale-110 transition">
 
@@ -229,11 +262,14 @@ export default function TeacherProfile() {
                     </p>
 
                     <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-                        <div className="bg-gradient-to-r from-green-500 to-emerald-600 h-2 rounded-full w-full"></div>
+                        <div
+                            className="bg-gradient-to-r from-green-500 to-emerald-600 h-2 rounded-full"
+                            style={{ width: `${completion}%` }}
+                        ></div>
                     </div>
 
                     <p className="text-xs text-gray-500 mt-2">
-                        100% complete
+                        {completion}% complete
                     </p>
 
                 </div>
@@ -266,7 +302,7 @@ export default function TeacherProfile() {
 
                     <div>
                         <label className="text-sm font-medium text-gray-600">Date of Birth</label>
-                        <input type="date" name="dateOfBirth" value={profile.dateOfBirth || ""} onChange={handleChange}
+                        <input type="date" name="dateOfBirth" value={profile.dateOfBirth ? profile.dateOfBirth.split("T")[0] : ""} onChange={handleChange}
                             className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-green-500 outline-none transition" />
                     </div>
 

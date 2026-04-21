@@ -47,7 +47,9 @@ export default function TeacherStudentProfile() {
     consistency = "N/A"
   } = data || {};
 
-  const imageUrl = `${BASE}/teacher/profile-image/${student.id}`;
+  const imageUrl = student.photoUrl
+    ? `${BASE}${student.photoUrl}`
+    : null;
 
   const initials = (student.fullName || "U")
     .split(" ")
@@ -119,15 +121,22 @@ export default function TeacherStudentProfile() {
           </button>
         </div>
 
-        {/* 🔥 TOP SUMMARY STRIP */}
+        {/* TOP SUMMARY STRIP */}
         <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-2xl px-6 py-5 shadow-sm flex justify-between items-center">
 
           <div className="flex items-center gap-4">
 
             <img
-              src={imageUrl}
+              src={
+                imageUrl
+                  ? `${imageUrl}?t=${Date.now()}`
+                  : "https://ui-avatars.com/api/?name=" + student.fullName
+              }
               alt="student"
               className="w-14 h-14 rounded-full object-cover border-2 border-white"
+              onError={(e) => {
+                e.target.src = "https://ui-avatars.com/api/?name=" + student.fullName;
+              }}
             />
 
             <div>

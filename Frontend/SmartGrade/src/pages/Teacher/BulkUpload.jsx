@@ -9,7 +9,7 @@ import { toast } from "react-toastify";
 import api from "../../services/api";
 
 export default function BulkUpload() {
-    
+
     const navigate = useNavigate();
 
     const [exams, setExams] = useState([]);
@@ -59,6 +59,12 @@ export default function BulkUpload() {
             toast.warning("Select section and file first.");
             return;
         }
+        const fileName = file.name.toLowerCase();
+
+        if (!fileName.endsWith(".csv") && !fileName.endsWith(".xlsx")) {
+            toast.error("Wrong file. Please upload CSV or XLSX format.");
+            return;
+        }
 
         const formData = new FormData();
         formData.append("File", file);
@@ -66,6 +72,7 @@ export default function BulkUpload() {
 
         try {
             setLoading(true);
+
             const res = await api.post(
                 "/teacher/bulk-upload-preview",
                 formData,
@@ -81,7 +88,30 @@ export default function BulkUpload() {
 
         } catch (err) {
             console.error(err);
-            toast.error("Preview failed.");
+
+            let message = "Something went wrong while generating preview.";
+
+            if (err.response) {
+                const data = err.response.data;
+
+                if (typeof data === "string") {
+                    message = data; // e.g. "No file uploaded."
+                } else if (data?.message) {
+                    message = data.message;
+                } else if (data?.title) {
+                    message = data.title;
+                } else if (data?.errors) {
+                    // ASP.NET validation errors
+                    message = Object.values(data.errors)
+                        .flat()
+                        .join(" ");
+                }
+            } else if (err.message) {
+                message = err.message; // network error
+            }
+
+            toast.error(message);
+
         } finally {
             setLoading(false);
         }
@@ -194,7 +224,7 @@ export default function BulkUpload() {
 
                             <input
                                 type="file"
-                                accept=".csv,.xlsx"
+                                accept="*"
                                 onChange={(e) => setFile(e.target.files[0])}
                                 className="text-sm"
                             />

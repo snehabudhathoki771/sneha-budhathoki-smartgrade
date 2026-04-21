@@ -130,7 +130,9 @@ export default function TeacherStudents() {
                                         .join("")
                                         .toUpperCase();
 
-                                    const imageUrl = `${BASE}/teacher/profile-image/${s.id}`;
+                                    const imageUrl = s.photoUrl
+                                        ? `${BASE}${s.photoUrl}`
+                                        : "https://ui-avatars.com/api/?name=" + s.fullName;
 
                                     return (
 
@@ -146,11 +148,14 @@ export default function TeacherStudents() {
                                                 <div className="flex items-center gap-3">
 
                                                     <img
-                                                        src={imageUrl}
+                                                        src={`${imageUrl}?t=${Date.now()}`}
                                                         alt={s.fullName}
+                                                        onError={(e) => {
+                                                            e.target.src = "https://ui-avatars.com/api/?name=" + s.fullName;
+                                                        }}
                                                         className="w-10 h-10 rounded-full object-cover border border-gray-200"
                                                     />
-                                                    
+
                                                     <div className="font-medium text-gray-800">
                                                         {s.fullName}
                                                     </div>

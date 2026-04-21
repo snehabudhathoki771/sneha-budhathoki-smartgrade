@@ -104,8 +104,23 @@ namespace SmartGrade.Controllers
 
             var profile = await _dashboardService.GetProfileAsync(studentId.Value.ToString());
 
-            return Ok(profile);
+            return Ok(new
+            {
+                id = studentId.Value,
+
+                fullName = profile.FullName,
+                email = profile.Email,
+                phone = profile.Phone,
+                address = profile.Address,
+                dateOfBirth = profile.DateOfBirth,
+                gender = profile.Gender,
+                guardianName = profile.GuardianName,
+                guardianPhone = profile.GuardianPhone,
+
+                photoUrl = $"/api/student/profile-image/{studentId.Value}"
+            });
         }
+
 
         // ================= REPORT SUMMARY =================
 
@@ -283,6 +298,10 @@ namespace SmartGrade.Controllers
 
             if (user == null || user.ProfileImage == null)
                 return NotFound();
+
+            Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+            Response.Headers["Pragma"] = "no-cache";
+            Response.Headers["Expires"] = "0";
 
             return File(user.ProfileImage, user.ProfileImageContentType ?? "image/jpeg");
         }
